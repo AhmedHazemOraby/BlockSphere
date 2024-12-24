@@ -53,19 +53,19 @@ const Home = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user: user.username || 'Anonymous',  // Use user info
+          user: user.name || 'Anonymous', // Use the user's name
           content: newPost,
           image,
         }),
       });
       const createdPost = await response.json();
-      setPosts([createdPost, ...posts]);  // Add new post to the feed
-      setNewPost('');  // Clear post input
-      setNewImage(null);  // Clear image input
+      setPosts([createdPost, ...posts]); // Add new post to the feed
+      setNewPost(''); // Clear post input
+      setNewImage(null); // Clear image input
     } catch (error) {
       console.error('Error posting:', error);
     }
-  };
+  };  
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-100 p-4">

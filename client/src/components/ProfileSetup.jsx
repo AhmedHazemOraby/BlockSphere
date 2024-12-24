@@ -5,6 +5,7 @@ import { useUser } from '../context/UserContext';
 
 const ProfileSetup = () => {
   const { registerUser } = useUser(); // Use registerUser from context
+  const [name, setName] = useState(''); // Name field
   const [photo, setPhoto] = useState(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,20 +29,19 @@ const ProfileSetup = () => {
       let photoUrl = '';
 
       if (photo) {
-        // Ensure the file is uploaded correctly
         const added = await ipfsClient.add(photo);
         photoUrl = `http://localhost:8080/ipfs/${added.path}`;
       }
 
-      // Send email, password, and optional photo to the server
+      // Send name, email, password, and optional photo to the server
       await registerUser({
+        name, // Include the name field in the payload
         email,
         password,
         photoUrl,
       });
 
-      // Redirect to home after successful account creation
-      navigate('/home');
+      navigate('/home'); // Redirect to home after successful account creation
     } catch (error) {
       console.error('Error during signup:', error);
       setError('An error occurred while creating your profile. Please try again.');
@@ -59,6 +59,17 @@ const ProfileSetup = () => {
         ) : (
           <form onSubmit={handleSubmit}>
             {error && <p className="text-red-500 mb-4">{error}</p>}
+
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2">Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded"
+                required
+              />
+            </div>
 
             <div className="mb-4">
               <label className="block text-gray-700 mb-2">Email</label>

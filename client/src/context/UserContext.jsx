@@ -17,22 +17,23 @@ export const UserProvider = ({ children }) => {
       const response = await fetch('http://localhost:5000/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(data), // Ensure name is part of `data`
       });
+  
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData.user); // Set user data after successful registration
-        setUserProfile(userData.user); // Set user profile after successful registration
-        setError(null); // Clear any previous errors
+        setUser(userData.user);
+        setUserProfile(userData.user);
+        setError(null);
       } else {
         const error = await response.json();
         throw new Error(error.message);
       }
     } catch (error) {
       console.error('Error registering user:', error.message);
-      setError(error.message); // Set error message to show on UI
+      setError(error.message);
     }
-  };
+  };    
 
   // Function to update user profile
   const updateUserProfile = async (data) => {

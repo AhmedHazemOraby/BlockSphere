@@ -8,43 +8,52 @@ const ipfsClient = require('ipfs-http-client').create({ url: 'http://localhost:5
 
 const app = express();
 
-app.use(cors({
-  origin: '*', // Adjust this in production to your frontend domain
-  methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+  cors({
+    origin: '*', // Adjust this in production to your frontend domain
+    methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 app.use(bodyParser.json());
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose
+  .connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected successfully'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch((err) => console.error('MongoDB connection error:', err));
 
-// Define User schema (without walletAddress)
-const userSchema = new mongoose.Schema({
-  email: { type: String, unique: true, required: true },
-  password: { type: String, required: true },
-  photoUrl: String,  // Optional profile picture from IPFS
-}, { timestamps: true });
+// Define User schema
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true }, // Added 'name' field
+    email: { type: String, unique: true, required: true },
+    password: { type: String, required: true },
+    photoUrl: String, // Optional profile picture from IPFS
+  },
+  { timestamps: true }
+);
 
 const User = mongoose.model('User', userSchema);
 
 // Define Post schema for the feed
-const postSchema = new mongoose.Schema({
-  user: String,
-  content: String,
-  image: String,  // Optional image in base64 or URL
-  createdAt: { type: Date, default: Date.now },
-});
+const postSchema = new mongoose.Schema(
+  {
+    user: String,
+    content: String,
+    image: String, // Optional image in base64 or URL
+    createdAt: { type: Date, default: Date.now },
+  }
+);
 
 const Post = mongoose.model('Post', postSchema);
 
-// Register user endpoint (removed walletAddress)
+// Register user endpoint
 app.post('/api/register', async (req, res) => {
-  const { email, password, photoUrl } = req.body;
+  const { name, email, password, photoUrl } = req.body;
 
   try {
-    console.log('Registering new user:', email);
+    console.log('Registering new user:', req.body); // Debugging
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -57,12 +66,13 @@ app.post('/api/register', async (req, res) => {
 
     // Create new user
     const user = new User({
+      name, // Include name field
       email,
       password: hashedPassword,
-      photoUrl,  // Optional photo URL
+      photoUrl, // Optional photo URL
     });
 
-    await user.save();  // Save the user to the database
+    await user.save(); // Save the user to the database
     console.log('User registered successfully:', user);
 
     res.status(201).json({ message: 'User registered successfully', user });
@@ -95,28 +105,6 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Endpoint to update user profile
-app.post('/api/updateProfile', async (req, res) => {
-  const { email, photoUrl } = req.body;
-
-  try {
-    const user = await User.findOneAndUpdate(
-      { email },
-      { photoUrl },
-      { new: true }
-    );
-
-    if (user) {
-      res.status(200).json({ message: 'Profile updated successfully', user });
-    } else {
-      res.status(404).json({ message: 'User not found' });
-    }
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    res.status(500).json({ message: 'Error updating profile' });
-  }
-});
-
 // Fetch user profile by email
 app.get('/api/profile', async (req, res) => {
   const { email } = req.query;
@@ -142,10 +130,11 @@ app.post('/api/posts', async (req, res) => {
     const post = new Post({
       user,
       content,
-      image,  // Optional image
+      image, // Optional image
     });
 
-    await post.save();  // Save post to the database
+    await post.save(); // Save post to the database
+    console.log('Post created successfully:', post); // Debugging
     res.status(201).json(post);
   } catch (error) {
     console.error('Error creating post:', error);
@@ -156,7 +145,7 @@ app.post('/api/posts', async (req, res) => {
 // Endpoint to fetch all posts
 app.get('/api/posts', async (req, res) => {
   try {
-    const posts = await Post.find().sort({ createdAt: -1 });  // Fetch posts, sorted by creation date
+    const posts = await Post.find().sort({ createdAt: -1 }); // Fetch posts, sorted by creation date
     res.status(200).json(posts);
   } catch (error) {
     console.error('Error fetching posts:', error);

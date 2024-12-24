@@ -24,6 +24,7 @@ const Navbar = () => {
 
   if (loading) return null;
 
+  // Dynamically adjust IPFS gateway URL
   const sanitizedPhotoUrl = user?.photoUrl?.replace('http://localhost:8080', '/ipfs');
 
   return (
@@ -42,7 +43,7 @@ const Navbar = () => {
             <img
               src={sanitizedPhotoUrl || defaultUserImage}
               alt="Profile"
-              onError={(e) => (e.target.src = defaultUserImage)} // Fallback to default
+              onError={(e) => (e.target.src = defaultUserImage)} // Fallback for failed images
               className="w-10 h-10 rounded-full cursor-pointer object-cover"
             />
             <ul className="hidden group-hover:block absolute bg-white shadow-md mt-2 py-2 rounded-md">

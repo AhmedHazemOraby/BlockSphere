@@ -3,9 +3,8 @@ import { useUser } from '../context/UserContext';
 import defaultUserImage from '../../images/defaultUserImage.png';
 
 const Profile = () => {
-  const { user } = useUser(); // Access user context
+  const { user } = useUser();
 
-  // Handle case where user is not logged in
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -25,18 +24,6 @@ const Profile = () => {
           />
           <h2 className="text-xl font-bold">{user.name || 'Unnamed User'}</h2>
           <p className="text-gray-500">{user.email || 'No email provided'}</p>
-        </div>
-        <div className="mt-6">
-          <h3 className="text-lg font-bold">Achievements</h3>
-          <ul className="list-disc list-inside text-gray-700">
-            {user.achievements?.length ? (
-              user.achievements.map((achievement, index) => (
-                <li key={index}>{achievement}</li>
-              ))
-            ) : (
-              <p className="text-gray-500">No achievements added yet.</p>
-            )}
-          </ul>
         </div>
       </div>
     </div>
