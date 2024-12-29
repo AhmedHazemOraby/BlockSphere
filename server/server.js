@@ -12,7 +12,7 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: '*', // Adjust this in production
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
@@ -39,131 +39,155 @@ mongoose
   .catch((err) => console.error('MongoDB connection error:', err));
 
 // Define Schemas
-const userSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    email: { type: String, unique: true, required: true },
-    password: { type: String, required: true },
-    photoUrl: String,
-    workplace: String,
-    degrees: String,
-    certifications: String,
-    walletAddress: String,
-  },
-  { timestamps: true }
-);
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, unique: true, required: true },
+  password: { type: String, required: true },
+  photoUrl: String,
+  workplace: String,
+  degrees: String,
+  certifications: String,
+  walletAddress: String,
+}, { timestamps: true });
 
-const postSchema = new mongoose.Schema(
-  {
-    user: String,
-    content: String,
-    image: String,
-    createdAt: { type: Date, default: Date.now },
-  },
-  { timestamps: true }
-);
+const organizationSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, unique: true, required: true },
+  password: { type: String, required: true },
+  photoUrl: String,
+  establishedSince: Date,
+  numWorkers: Number,
+  accolades: String,
+}, { timestamps: true });
+
+const postSchema = new mongoose.Schema({
+  user: String,
+  content: String,
+  image: String,
+  createdAt: { type: Date, default: Date.now },
+}, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
+const Organization = mongoose.model('Organization', organizationSchema);
 const Post = mongoose.model('Post', postSchema);
 
 // Routes
 
-// User Registration
+// User and Organization Registration
 app.post('/api/register', async (req, res) => {
-  const { name, email, password, photoUrl } = req.body;
+  const { name, email, password, photoUrl, role, establishedSince, numWorkers, accolades } = req.body;
 
   try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ name, email, password: hashedPassword, photoUrl });
 
-    await user.save();
-    res.status(201).json({ message: 'User registered successfully', user });
+    if (role === 'organization') {
+      const existingOrganization = await Organization.findOne({ email });
+      if (existingOrganization) {
+        return res.status(400).json({ message: 'Organization already exists' });
+      }
+
+      const organization = new Organization({
+        name,
+        email,
+        password: hashedPassword,
+        photoUrl,
+        establishedSince,
+        numWorkers,
+        accolades,
+      });
+
+      await organization.save();
+      return res.status(201).json({ message: 'Organization registered successfully', organization });
+    } else {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
+
+      const user = new User({ name, email, password: hashedPassword, photoUrl });
+      await user.save();
+      return res.status(201).json({ message: 'User registered successfully', user });
+    }
   } catch (error) {
-    console.error('Error registering user:', error);
-    res.status(500).json({ message: 'Error registering user' });
+    console.error('Error registering account:', error);
+    res.status(500).json({ message: 'Error registering account' });
   }
 });
 
-// User Login
+// User and Organization Login
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    let account = await User.findOne({ email });
+    let role = 'individual';
+
+    if (!account) {
+      account = await Organization.findOne({ email });
+      role = 'organization';
     }
 
-    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!account) {
+      return res.status(404).json({ message: 'Account not found' });
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(password, account.password);
     if (!isPasswordCorrect) {
       return res.status(401).json({ message: 'Incorrect password' });
     }
 
-    const { password: _, ...userWithoutPassword } = user._doc;
-    res.status(200).json({ message: 'Login successful', user: userWithoutPassword });
+    const { password: _, ...accountWithoutPassword } = account._doc;
+    res.status(200).json({ message: 'Login successful', account: accountWithoutPassword, role });
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ message: 'Error logging in' });
   }
 });
 
-// Fetch User Profile
+// Fetch User or Organization Profile
 app.get('/api/profile', async (req, res) => {
-  const { email } = req.query;
+  const { email, role } = req.query;
 
   try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    const profile =
+      role === 'organization'
+        ? await Organization.findOne({ email })
+        : await User.findOne({ email });
+
+    if (!profile) {
+      return res.status(404).json({ message: `${role} not found` });
     }
-    res.status(200).json(user);
+
+    res.status(200).json(profile);
   } catch (error) {
-    console.error('Error fetching user profile:', error);
-    res.status(500).json({ message: 'Error fetching user profile' });
+    console.error('Error fetching profile:', error);
+    res.status(500).json({ message: 'Error fetching profile' });
   }
 });
 
-// Update User Profile
+// Update User or Organization Profile
 app.put('/api/profile', upload.single('photo'), async (req, res) => {
-  const { email, name, workplace, degrees, certifications, walletAddress } = req.body;
+  const { email, name, workplace, degrees, certifications, walletAddress, establishedSince, numWorkers, accolades, role } = req.body;
   const photoUrl = req.file ? `/uploads/${req.file.filename}` : req.body.photoUrl;
 
   try {
-    // Update the user profile in the database
-    const user = await User.findOneAndUpdate(
-      { email },
-      { name, photoUrl, workplace, degrees, certifications, walletAddress },
-      { new: true } // Return the updated document
-    );
+    const updateData =
+      role === 'organization'
+        ? { name, photoUrl, establishedSince, numWorkers, accolades }
+        : { name, photoUrl, workplace, degrees, certifications, walletAddress };
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    const model = role === 'organization' ? Organization : User;
+
+    const updatedProfile = await model.findOneAndUpdate({ email }, updateData, { new: true });
+
+    if (!updatedProfile) {
+      return res.status(404).json({ message: `${role} not found` });
     }
 
-    res.status(200).json({ message: 'Profile updated successfully', user });
+    res.status(200).json({ message: 'Profile updated successfully', updatedProfile });
   } catch (error) {
     console.error('Error updating profile:', error);
     res.status(500).json({ message: 'Error updating profile' });
-  }
-});
-
-// File Upload
-app.post('/api/upload', upload.single('file'), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
-
-    const filePath = `/uploads/${req.file.filename}`;
-    res.status(200).json({ photoUrl: filePath });
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    res.status(500).json({ message: 'Error uploading file' });
   }
 });
 
@@ -175,21 +199,6 @@ app.get('/api/posts', async (req, res) => {
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ message: 'Error fetching posts' });
-  }
-});
-
-// Create Post
-app.post('/api/posts', upload.single('image'), async (req, res) => {
-  const { user, content } = req.body;
-  const image = req.file ? `/uploads/${req.file.filename}` : null;
-
-  try {
-    const post = new Post({ user, content, image });
-    await post.save();
-    res.status(201).json(post);
-  } catch (error) {
-    console.error('Error creating post:', error);
-    res.status(500).json({ message: 'Error creating post' });
   }
 });
 

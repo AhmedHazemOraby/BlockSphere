@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import defaultUserImage from '../../images/defaultUserImage.png';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, updateUserProfile } = useUser();
+  const { user, role, updateUserProfile } = useUser();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -15,9 +15,29 @@ const Profile = () => {
     degrees: user?.degrees || '',
     certifications: user?.certifications || '',
     walletAddress: user?.walletAddress || '',
+    establishedSince: user?.establishedSince || '',
+    numWorkers: user?.numWorkers || '',
+    accolades: user?.accolades || '',
   });
 
   const [walletConnected, setWalletConnected] = useState(!!user?.walletAddress);
+
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+        workplace: user.workplace || '',
+        degrees: user.degrees || '',
+        certifications: user.certifications || '',
+        walletAddress: user.walletAddress || '',
+        establishedSince: user.establishedSince || '',
+        numWorkers: user.numWorkers || '',
+        accolades: user.accolades || '',
+      }));
+    }
+  }, [user]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -44,16 +64,15 @@ const Profile = () => {
 
   const handleSave = async () => {
     try {
-      // Ensure the photo file is uploaded and URL is generated before saving
       let photoUrl = formData.photo ? await uploadPhoto(formData.photo) : user.photoUrl;
 
-      // Update the profile data
       const updatedData = {
         ...formData,
         photoUrl,
+        role,
       };
 
-      await updateUserProfile(updatedData); // This should update the backend
+      await updateUserProfile(updatedData);
       alert('Profile updated successfully!');
       setIsEditing(false);
     } catch (error) {
@@ -62,11 +81,10 @@ const Profile = () => {
   };
 
   const uploadPhoto = async (photo) => {
-    // Function to upload the photo to IPFS or a file storage system
     const formData = new FormData();
     formData.append('file', photo);
 
-    const response = await fetch('/api/upload', { // Example upload endpoint
+    const response = await fetch('/api/upload', {
       method: 'POST',
       body: formData,
     });
@@ -76,7 +94,7 @@ const Profile = () => {
     }
 
     const data = await response.json();
-    return data.photoUrl; // Assumes API returns a `photoUrl`
+    return data.photoUrl;
   };
 
   if (!user) {
@@ -97,14 +115,22 @@ const Profile = () => {
               alt="Profile"
               className="w-32 h-32 rounded-full mb-4"
             />
-            <h2 className="text-xl font-bold">{user.name || 'Unnamed User'}</h2>
-            <p className="text-gray-500">{user.email || 'No email provided'}</p>
-            <p className="text-gray-500">Workplace: {user.workplace || 'N/A'}</p>
-            <p className="text-gray-500">Degrees: {user.degrees || 'N/A'}</p>
-            <p className="text-gray-500">Certifications: {user.certifications || 'N/A'}</p>
-            <p className="text-gray-500">
-              Wallet: {user.walletAddress || 'Not connected'}
-            </p>
+            <h2 className="text-xl font-bold">{user.name}</h2>
+            <p className="text-gray-500">{user.email}</p>
+            {role === 'organization' ? (
+              <>
+                <p className="text-gray-500">Established Since: {user.establishedSince || 'N/A'}</p>
+                <p className="text-gray-500">Number of Workers: {user.numWorkers || 'N/A'}</p>
+                <p className="text-gray-500">Accolades: {user.accolades || 'N/A'}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-500">Workplace: {user.workplace || 'N/A'}</p>
+                <p className="text-gray-500">Degrees: {user.degrees || 'N/A'}</p>
+                <p className="text-gray-500">Certifications: {user.certifications || 'N/A'}</p>
+                <p className="text-gray-500">Wallet: {user.walletAddress || 'Not connected'}</p>
+              </>
+            )}
             <button
               onClick={connectWallet}
               className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600"
@@ -132,55 +158,72 @@ const Profile = () => {
               className="w-full p-2 border border-gray-300 rounded"
             />
           </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Profile Picture</label>
-            <input
-              type="file"
-              name="photo"
-              onChange={handleFileChange}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Workplace</label>
-            <input
-              type="text"
-              name="workplace"
-              value={formData.workplace}
-              onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Degrees</label>
-            <input
-              type="text"
-              name="degrees"
-              value={formData.degrees}
-              onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Certifications</label>
-            <input
-              type="text"
-              name="certifications"
-              value={formData.certifications}
-              onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded"
-            />
-          </div>
+          {role === 'organization' ? (
+            <>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Established Since</label>
+                <input
+                  type="date"
+                  name="establishedSince"
+                  value={formData.establishedSince}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border border-gray-300 rounded"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Number of Workers</label>
+                <input
+                  type="number"
+                  name="numWorkers"
+                  value={formData.numWorkers}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border border-gray-300 rounded"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Accolades</label>
+                <textarea
+                  name="accolades"
+                  value={formData.accolades}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border border-gray-300 rounded"
+                ></textarea>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Workplace</label>
+                <input
+                  type="text"
+                  name="workplace"
+                  value={formData.workplace}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border border-gray-300 rounded"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Degrees</label>
+                <input
+                  type="text"
+                  name="degrees"
+                  value={formData.degrees}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border border-gray-300 rounded"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Certifications</label>
+                <input
+                  type="text"
+                  name="certifications"
+                  value={formData.certifications}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border border-gray-300 rounded"
+                />
+              </div>
+            </>
+          )}
           <button
             onClick={handleSave}
             className="w-full bg-green-500 text-white py-2 px-4 rounded-full hover:bg-green-600 mt-2"
