@@ -6,3 +6,4 @@ export { default as Login } from './Login';
 export { default as Home } from './Home';
 export { default as ProfileSetup } from './ProfileSetup';
 export { default as Profile } from './Profile';
+export { default as EditProfile } from './EditProfile';

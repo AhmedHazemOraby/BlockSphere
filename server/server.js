@@ -4,77 +4,84 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
-const ipfsClient = require('ipfs-http-client').create({ url: 'http://localhost:5001/api/v0' });
+const multer = require('multer');
+const path = require('path');
 
 const app = express();
 
+// Middleware
 app.use(
   cors({
-    origin: '*', // Adjust this in production to your frontend domain
+    origin: '*', // Adjust this in production
     methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 app.use(bodyParser.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// MongoDB connection
+// Multer Configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
+    cb(null, `profile-${uniqueSuffix}`);
+  },
+});
+const upload = multer({ storage });
+
+// MongoDB Connection
 mongoose
   .connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected successfully'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// Define User schema
+// Define Schemas
 const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true }, // Added 'name' field
+    name: { type: String, required: true },
     email: { type: String, unique: true, required: true },
     password: { type: String, required: true },
-    photoUrl: String, // Optional profile picture from IPFS
+    photoUrl: String,
+    workplace: String,
+    degrees: String,
+    certifications: String,
+    walletAddress: String,
+  },
+  { timestamps: true }
+);
+
+const postSchema = new mongoose.Schema(
+  {
+    user: String,
+    content: String,
+    image: String,
+    createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
 
 const User = mongoose.model('User', userSchema);
-
-// Define Post schema for the feed
-const postSchema = new mongoose.Schema(
-  {
-    user: String,
-    content: String,
-    image: String, // Optional image in base64 or URL
-    createdAt: { type: Date, default: Date.now },
-  }
-);
-
 const Post = mongoose.model('Post', postSchema);
 
-// Register user endpoint
+// Routes
+
+// User Registration
 app.post('/api/register', async (req, res) => {
   const { name, email, password, photoUrl } = req.body;
 
   try {
-    console.log('Registering new user:', req.body); // Debugging
-
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ name, email, password: hashedPassword, photoUrl });
 
-    // Create new user
-    const user = new User({
-      name, // Include name field
-      email,
-      password: hashedPassword,
-      photoUrl, // Optional photo URL
-    });
-
-    await user.save(); // Save the user to the database
-    console.log('User registered successfully:', user);
-
+    await user.save();
     res.status(201).json({ message: 'User registered successfully', user });
   } catch (error) {
     console.error('Error registering user:', error);
@@ -82,7 +89,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Login endpoint
+// User Login
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -97,7 +104,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ message: 'Incorrect password' });
     }
 
-    const { password: _, ...userWithoutPassword } = user._doc; // Exclude password from response
+    const { password: _, ...userWithoutPassword } = user._doc;
     res.status(200).json({ message: 'Login successful', user: userWithoutPassword });
   } catch (error) {
     console.error('Error logging in:', error);
@@ -105,47 +112,65 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Fetch user profile by email
+// Fetch User Profile
 app.get('/api/profile', async (req, res) => {
   const { email } = req.query;
 
   try {
     const user = await User.findOne({ email });
-    if (user) {
-      res.status(200).json(user);
-    } else {
-      res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
+    res.status(200).json(user);
   } catch (error) {
     console.error('Error fetching user profile:', error);
     res.status(500).json({ message: 'Error fetching user profile' });
   }
 });
 
-// Endpoint to create a new post
-app.post('/api/posts', async (req, res) => {
-  const { user, content, image } = req.body;
+// Update User Profile
+app.put('/api/profile', upload.single('photo'), async (req, res) => {
+  const { email, name, workplace, degrees, certifications, walletAddress } = req.body;
+  const photoUrl = req.file ? `/uploads/${req.file.filename}` : req.body.photoUrl;
 
   try {
-    const post = new Post({
-      user,
-      content,
-      image, // Optional image
-    });
+    // Update the user profile in the database
+    const user = await User.findOneAndUpdate(
+      { email },
+      { name, photoUrl, workplace, degrees, certifications, walletAddress },
+      { new: true } // Return the updated document
+    );
 
-    await post.save(); // Save post to the database
-    console.log('Post created successfully:', post); // Debugging
-    res.status(201).json(post);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.status(200).json({ message: 'Profile updated successfully', user });
   } catch (error) {
-    console.error('Error creating post:', error);
-    res.status(500).json({ message: 'Error creating post' });
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Error updating profile' });
   }
 });
 
-// Endpoint to fetch all posts
+// File Upload
+app.post('/api/upload', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const filePath = `/uploads/${req.file.filename}`;
+    res.status(200).json({ photoUrl: filePath });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ message: 'Error uploading file' });
+  }
+});
+
+// Fetch Posts
 app.get('/api/posts', async (req, res) => {
   try {
-    const posts = await Post.find().sort({ createdAt: -1 }); // Fetch posts, sorted by creation date
+    const posts = await Post.find().sort({ createdAt: -1 });
     res.status(200).json(posts);
   } catch (error) {
     console.error('Error fetching posts:', error);
@@ -153,8 +178,26 @@ app.get('/api/posts', async (req, res) => {
   }
 });
 
-// Start the server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Create Post
+app.post('/api/posts', upload.single('image'), async (req, res) => {
+  const { user, content } = req.body;
+  const image = req.file ? `/uploads/${req.file.filename}` : null;
+
+  try {
+    const post = new Post({ user, content, image });
+    await post.save();
+    res.status(201).json(post);
+  } catch (error) {
+    console.error('Error creating post:', error);
+    res.status(500).json({ message: 'Error creating post' });
+  }
 });
+
+// Handle 404 Errors
+app.use((req, res) => {
+  res.status(404).json({ message: 'Endpoint not found' });
+});
+
+// Start Server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useUser } from '../context/UserContext';
 
 const Home = () => {
-  const { user } = useUser();  // Access the logged-in user data
+  const { user } = useUser();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [newPost, setNewPost] = useState('');  // State for new post content
-  const [newImage, setNewImage] = useState(null);  // State for new post image
+  const [newPost, setNewPost] = useState('');
+  const [newImage, setNewImage] = useState(null);
 
   // Fetch posts on mount
   useEffect(() => {
@@ -14,8 +14,12 @@ const Home = () => {
       setLoading(true);
       try {
         const response = await fetch('http://localhost:5000/api/posts');
-        const data = await response.json();
-        setPosts(data);
+        if (response.ok) {
+          const data = await response.json();
+          setPosts(data);
+        } else {
+          console.error('Error fetching posts:', response.statusText);
+        }
       } catch (error) {
         console.error('Error fetching posts:', error);
       } finally {
@@ -27,45 +31,36 @@ const Home = () => {
 
   // Handle submitting a new post
   const handlePostSubmit = async () => {
-    if (!newPost.trim()) return;  // Prevent empty posts
-
+    if (!newPost.trim()) return;
     if (!user) {
       console.error('User is not logged in. Cannot submit post.');
       return;
     }
 
-    let base64Image = '';
+    const formData = new FormData();
+    formData.append('content', newPost);
     if (newImage) {
-      const reader = new FileReader();
-      reader.readAsDataURL(newImage);
-      reader.onloadend = async () => {
-        base64Image = reader.result.split(',')[1];  // Get base64 data
-        await submitPost(base64Image);  // Submit post with image
-      };
-    } else {
-      await submitPost();  // Submit post without image
+      formData.append('image', newImage);
     }
-  };
+    formData.append('user', user.name || 'Anonymous');
 
-  const submitPost = async (image = '') => {
     try {
       const response = await fetch('http://localhost:5000/api/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user: user.name || 'Anonymous', // Use the user's name
-          content: newPost,
-          image,
-        }),
+        body: formData,
       });
-      const createdPost = await response.json();
-      setPosts([createdPost, ...posts]); // Add new post to the feed
-      setNewPost(''); // Clear post input
-      setNewImage(null); // Clear image input
+      if (response.ok) {
+        const createdPost = await response.json();
+        setPosts((prevPosts) => [createdPost, ...prevPosts]);
+        setNewPost('');
+        setNewImage(null);
+      } else {
+        console.error('Error posting:', response.statusText);
+      }
     } catch (error) {
       console.error('Error posting:', error);
     }
-  };  
+  };
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-100 p-4">
@@ -109,7 +104,7 @@ const Home = () => {
                 </div>
                 <p className="text-gray-800 mb-4">{post.content}</p>
                 {post.image && (
-                  <img src={post.image} alt="Post" className="w-full h-auto rounded-md" />
+                  <img src={`http://localhost:5000${post.image}`} alt="Post" className="w-full h-auto rounded-md" />
                 )}
               </div>
             ))
