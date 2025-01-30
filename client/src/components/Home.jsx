@@ -7,10 +7,11 @@ const Home = () => {
   const [loading, setLoading] = useState(false);
   const [newPost, setNewPost] = useState("");
   const [newImage, setNewImage] = useState(null);
+  const [commentTexts, setCommentTexts] = useState({});
 
   const API_BASE_URL = "http://localhost:5000/api/posts";
 
-  // Fetch all posts
+  // ✅ Fetch all posts
   useEffect(() => {
     const fetchPosts = async () => {
       setLoading(true);
@@ -29,14 +30,15 @@ const Home = () => {
     fetchPosts();
   }, []);
 
-  // Handle post submission
+  // ✅ Handle post submission
   const handlePostSubmit = async () => {
     if (!newPost.trim()) return alert("Post content cannot be empty.");
     if (!user) return alert("You must be logged in to create a post.");
 
     const formData = new FormData();
     formData.append("content", newPost);
-    formData.append("user", user.name || "Anonymous");
+    formData.append("user", user.name);
+    formData.append("userPhoto", user.photoUrl || ""); // Store user profile picture
     if (newImage) formData.append("image", newImage);
 
     try {
@@ -52,8 +54,6 @@ const Home = () => {
       }
 
       const createdPost = await response.json();
-      console.log("Post created successfully:", createdPost);
-
       setPosts([createdPost, ...posts]);
       setNewPost("");
       setNewImage(null);
@@ -63,56 +63,147 @@ const Home = () => {
     }
   };
 
-  return (
-    <div className="flex flex-col items-center min-h-screen bg-gray-100 p-4">
-      <h1 className="text-3xl font-bold mb-8">User Feed</h1>
+  // ✅ Handle Like Toggle
+  const handleLike = async (postId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/${postId}/like`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: user.name }),
+      });
 
+      if (response.ok) {
+        const updatedPost = await response.json();
+        setPosts(posts.map((p) => (p._id === postId ? updatedPost : p)));
+      }
+    } catch (error) {
+      console.error("Error liking post:", error.message);
+    }
+  };
+
+  // ✅ Handle Comment Submission
+  const handleComment = async (postId) => {
+    if (!commentTexts[postId]?.trim()) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/${postId}/comment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: user.name, text: commentTexts[postId] }),
+      });
+
+      if (response.ok) {
+        const updatedPost = await response.json();
+        setPosts(posts.map((p) => (p._id === postId ? updatedPost : p)));
+        setCommentTexts((prev) => ({ ...prev, [postId]: "" }));
+      }
+    } catch (error) {
+      console.error("Error adding comment:", error.message);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center min-h-screen bg-gray-100 p-6">
+      <h1 className="text-4xl font-bold mb-8 text-gray-800">User Feed</h1>
+
+      {/* Post Creation Section */}
       {user && (
-        <div className="w-full max-w-2xl mb-8">
+        <div className="w-full max-w-2xl mb-8 p-4 bg-white shadow-lg rounded-lg">
           <textarea
             value={newPost}
             onChange={(e) => setNewPost(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded"
+            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
             placeholder="Write a post..."
           ></textarea>
           <input
             type="file"
             onChange={(e) => setNewImage(e.target.files[0])}
-            className="my-2"
+            className="my-2 p-2 border border-gray-300 rounded-md w-full"
             accept="image/*"
           />
           <button
             onClick={handlePostSubmit}
-            className="w-full bg-[#ffde00] text-black py-2 px-4 rounded-full hover:bg-[#e6c200] mt-2"
+            className="w-full bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition duration-200"
           >
             Post
           </button>
         </div>
       )}
 
-      {loading ? (
-        <p>Loading posts...</p>
-      ) : (
+      {/* Loading Indicator */}
+      {loading ? <p>Loading posts...</p> : (
         <div className="w-full max-w-2xl">
           {posts.length > 0 ? (
             posts.map((post) => (
-              <div key={post._id} className="bg-white shadow-md rounded-lg p-4 mb-6">
-                <div className="flex items-center mb-2">
-                  <div className="flex-1">
+              <div key={post._id} className="bg-white shadow-md rounded-lg p-6 mb-6">
+                {/* Post Header */}
+                <div className="flex items-center mb-4">
+                  <div className="flex-shrink-0">
+                    {post.userPhoto ? (
+                      <img src={post.userPhoto} alt={post.user} className="w-10 h-10 rounded-full" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white">
+                        {post.user.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="ml-3">
                     <h2 className="text-lg font-semibold">{post.user}</h2>
-                    <p className="text-sm text-gray-500">
-                      {new Date(post.createdAt).toLocaleString()}
-                    </p>
+                    <p className="text-sm text-gray-500">{new Date(post.createdAt).toLocaleString()}</p>
                   </div>
                 </div>
+
+                {/* Post Content */}
                 <p className="text-gray-800 mb-4">{post.content}</p>
                 {post.image && (
                   <img
                     src={post.image}
                     alt="Post"
-                    className="w-full h-auto rounded-md"
+                    className="w-full h-auto rounded-md border border-gray-200"
                   />
                 )}
+
+                {/* Like & Comment Buttons */}
+                <div className="flex items-center space-x-4 mt-4">
+                  <button
+                    onClick={() => handleLike(post._id)}
+                    className="flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-lg hover:bg-gray-200 transition duration-200"
+                  >
+                    👍 <span>{post.likes?.length || 0} Likes</span>
+                  </button>
+
+                  <button className="flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-lg hover:bg-gray-200 transition duration-200">
+                    💬 {post.comments?.length || 0} Comments
+                  </button>
+                </div>
+
+                {/* Comment Section */}
+                <div className="mt-4">
+                  {post.comments?.map((comment, index) => (
+                    <div key={index} className="p-2 bg-gray-100 rounded-lg my-1">
+                      <strong className="text-gray-800">{comment.user || "Anonymous"}</strong>: {comment.text}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Comment Input */}
+                <div className="mt-3 flex">
+                  <input
+                    type="text"
+                    placeholder="Write a comment..."
+                    value={commentTexts[post._id] || ""}
+                    onChange={(e) =>
+                      setCommentTexts((prev) => ({ ...prev, [post._id]: e.target.value }))
+                    }
+                    className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                  />
+                  <button
+                    onClick={() => handleComment(post._id)}
+                    className="ml-2 bg-yellow-500 text-white font-semibold px-3 py-2 rounded-lg hover:bg-yellow-600 transition duration-200"
+                  >
+                    💬
+                  </button>
+                </div>
               </div>
             ))
           ) : (

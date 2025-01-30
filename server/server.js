@@ -34,18 +34,6 @@ mongoose
   .then(() => console.log('MongoDB connected successfully'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// Define Schemas
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, unique: true, required: true },
-  password: { type: String, required: true },
-  photoUrl: { type: String },
-  workplace: String,
-  degrees: String,
-  certifications: String,
-  walletAddress: String,
-}, { timestamps: true });
-
 const organizationSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, unique: true, required: true },
@@ -56,7 +44,7 @@ const organizationSchema = new mongoose.Schema({
   accolades: String,
 }, { timestamps: true });
 
-const userModel = mongoose.model('User', userSchema);
+const User = require("./userModel"); 
 const organizationModel = mongoose.model('Organization', organizationSchema);
 
 // Routes
@@ -64,16 +52,21 @@ const organizationModel = mongoose.model('Organization', organizationSchema);
 app.post("/api/register", upload.single("photo"), async (req, res) => {
   const { name, email, password, role, establishedSince, numWorkers, accolades } = req.body;
   try {
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     let photoUrl = req.file ? await uploadToPinata(req.file.buffer, req.file.originalname) : null;
 
     const userData = { name, email, password: hashedPassword, photoUrl };
     if (role === "organization") Object.assign(userData, { establishedSince, numWorkers, accolades });
 
+    // ✅ Ensure we use `User` instead of redefining userModel
     const savedEntity =
       role === "organization"
         ? await new organizationModel(userData).save()
-        : await new userModel(userData).save();
+        : await User.create(userData); // ✅ FIXED
 
     res.status(201).json({ message: "Account registered successfully", entity: savedEntity });
   } catch (error) {
@@ -87,7 +80,7 @@ app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    let account = await userModel.findOne({ email });
+    let account = await User.findOne({ email }); 
     let role = 'individual';
 
     if (!account) {
@@ -108,7 +101,7 @@ app.post('/api/login', async (req, res) => {
     res.status(200).json({ message: 'Login successful', account: accountWithoutPassword, role });
   } catch (error) {
     console.error('Error logging in:', error);
-    res.status(500).json({ message: 'Error logging in' });
+    res.status(500).json({ message: 'Error logging in', error: error.message });
   }
 });
 
@@ -117,10 +110,14 @@ app.get('/api/profile', async (req, res) => {
   const { email, role } = req.query;
 
   try {
+    if (!email || !role) {
+      return res.status(400).json({ message: "Missing email or role" });
+    }
+
     const profile =
       role === 'organization'
         ? await organizationModel.findOne({ email })
-        : await userModel.findOne({ email });
+        : await User.findOne({ email }); // ✅ Fixed model reference
 
     if (!profile) {
       return res.status(404).json({ message: `${role} not found` });
@@ -129,7 +126,7 @@ app.get('/api/profile', async (req, res) => {
     res.status(200).json(profile);
   } catch (error) {
     console.error('Error fetching profile:', error);
-    res.status(500).json({ message: 'Error fetching profile' });
+    res.status(500).json({ message: 'Error fetching profile', error: error.message });
   }
 });
 
