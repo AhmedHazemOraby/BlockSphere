@@ -9,7 +9,6 @@ const OrganizationJobs = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Post job listing logic here
     console.log({
       jobTitle,
       jobDescription,

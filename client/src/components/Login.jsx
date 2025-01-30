@@ -3,31 +3,31 @@ import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 
 const Login = () => {
-  const { loginUser, error } = useUser(); // Access login function and error state
+  const { loginUser, error } = useUser();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [localError, setLocalError] = useState(null); // Local error state for better handling
+  const [localError, setLocalError] = useState(null);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setLocalError(null); // Clear previous local errors
+    setLocalError(null);
 
     try {
-      await loginUser(email, password); // Attempt login
-      navigate('/home'); // Redirect to home on successful login
+      await loginUser(email, password);
+      navigate('/home');
     } catch (err) {
       console.error('Login failed:', err);
-      setLocalError('Invalid email or password. Please try again.'); // Set a local error message
+      setLocalError('Invalid email or password. Please try again.');
     } finally {
-      setLoading(false); // Stop loading spinner
+      setLoading(false);
     }
   };
 
   const goToSignup = () => {
-    navigate('/profile-setup'); // Navigate to the signup page
+    navigate('/profile-setup');
   };
 
   return (
@@ -66,7 +66,7 @@ const Login = () => {
             <button
               type="submit"
               className="w-full bg-[#ffde00] text-black py-2 px-4 rounded-full hover:bg-[#e6c200]"
-              disabled={loading} // Disable button during loading
+              disabled={loading}
             >
               Login
             </button>

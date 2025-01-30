@@ -24,8 +24,7 @@ const Navbar = () => {
 
   if (loading) return null;
 
-  // Dynamically adjust IPFS gateway URL
-  const sanitizedPhotoUrl = user?.photoUrl?.replace('http://localhost:8080', '/ipfs');
+  const sanitizedPhotoUrl = user?.photoUrl?.replace('http://localhost:8080', 'https://gateway.pinata.cloud/ipfs');
 
   return (
     <nav className="w-full flex md:justify-center justify-between items-center p-4 bg-transparent">

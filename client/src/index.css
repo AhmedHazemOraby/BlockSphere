@@ -14,12 +14,12 @@ body {
   font-family: "Open Sans", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #333; /* Neutral dark gray for text */
-  background-color: #f5f5f5; /* Light gray background for the entire app */
+  color: #333;
+  background-color: #f5f5f5;
 }
 
 .gradient-bg-welcome {
-  background-color: #1a1a2e; /* Darker background color for contrast */
+  background-color: #1a1a2e;
   background-image: 
     radial-gradient(at 0% 0%, rgba(20, 20, 30, 0.8) 0, transparent 50%), 
     radial-gradient(at 50% 0%, rgba(40, 40, 60, 0.8) 0, transparent 50%), 
@@ -27,7 +27,7 @@ body {
 }
 
 .gradient-bg-services {
-  background-color: #1a1a2e; /* Consistent with other gradients */
+  background-color: #1a1a2e;
   background-image: 
     radial-gradient(at 0% 0%, rgba(20, 20, 30, 0.8) 0, transparent 50%), 
     radial-gradient(at 50% 100%, rgba(40, 40, 60, 0.8) 0, transparent 50%);
@@ -48,25 +48,24 @@ body {
 }
 
 .blue-glassmorphism {
-  background: rgba(30, 40, 60, 0.5); /* Slightly lighter for better contrast */
-  border-radius: 12px; /* Slightly rounded corners for a modern look */
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); /* Softer shadow for a more refined look */
-  backdrop-filter: blur(6px); /* Increased blur for a smoother glass effect */
+  background: rgba(30, 40, 60, 0.5); 
+  border-radius: 12px; 
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); 
+  backdrop-filter: blur(6px); 
   -webkit-backdrop-filter: blur(6px);
-  border: 1px solid rgba(0, 0, 0, 0.2); /* Subtle border for a cleaner look */
+  border: 1px solid rgba(0, 0, 0, 0.2); 
 }
 
-/* White glassmorphism */
 .white-glassmorphism {
-  background: rgba(255, 255, 255, 0.1); /* Slightly more opaque for better readability */
-  border-radius: 12px; /* Consistent with blue glassmorphism */
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border for consistency */
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .eth-card {
-  background-color: #b0aaff; /* Softer purple for a more professional look */
+  background-color: #b0aaff;
   background-image: 
     radial-gradient(at 80% 60%, rgba(160, 200, 140, 0.8) 0, transparent 60%), 
     radial-gradient(at 70% 25%, rgba(255, 100, 100, 0.8) 0, transparent 60%), 
@@ -78,7 +77,7 @@ body {
 }
 
 .text-gradient {
-  background-color: #000; /* Darker background for text */
+  background-color: #000;
   background-image: radial-gradient(at 5% 35%, rgba(255, 255, 255, 0.9) 0, transparent 55%), radial-gradient(at 100% 60%, rgba(0, 0, 0, 0.8) 0, transparent 50%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

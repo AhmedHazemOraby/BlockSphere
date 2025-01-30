@@ -2,9 +2,8 @@ import React from 'react';
 import { useUser } from '../context/UserContext';
 
 const Network = () => {
-  const { user } = useUser(); // Access user context
+  const { user } = useUser();
 
-  // Handle case where user is not logged in
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">

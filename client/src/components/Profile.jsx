@@ -22,6 +22,11 @@ const Profile = () => {
 
   const [walletConnected, setWalletConnected] = useState(!!user?.walletAddress);
 
+  const sanitizedPhotoUrl = user?.photoUrl
+  ? user.photoUrl.replace('http://localhost:8080', 'https://gateway.pinata.cloud/ipfs')
+  : defaultUserImage;
+
+
   useEffect(() => {
     if (user) {
       setFormData((prev) => ({
@@ -64,28 +69,33 @@ const Profile = () => {
 
   const handleSave = async () => {
     try {
-      let photoUrl = formData.photo ? await uploadPhoto(formData.photo) : user.photoUrl;
-
+      let photoUrl = formData.photo
+        ? await uploadPhoto(formData.photo)
+        : user.photoUrl;
+  
       const updatedData = {
         ...formData,
         photoUrl,
         role,
       };
-
+  
       await updateUserProfile(updatedData);
       alert('Profile updated successfully!');
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating profile:', error);
     }
-  };
+  };  
 
   const uploadPhoto = async (photo) => {
     const formData = new FormData();
     formData.append('file', photo);
 
-    const response = await fetch('/api/upload', {
+    const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
       method: 'POST',
+      headers: {
+        Authorization: `Bearer YOUR_PINATA_JWT`,
+      },
       body: formData,
     });
 
@@ -94,7 +104,7 @@ const Profile = () => {
     }
 
     const data = await response.json();
-    return data.photoUrl;
+    return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
   };
 
   if (!user) {
@@ -110,11 +120,12 @@ const Profile = () => {
       {!isEditing ? (
         <div className="bg-white shadow-md rounded-lg p-6 w-full max-w-md">
           <div className="flex flex-col items-center">
-            <img
-              src={user.photoUrl || defaultUserImage}
-              alt="Profile"
-              className="w-32 h-32 rounded-full mb-4"
-            />
+          <img
+            src={sanitizedPhotoUrl}
+            alt="Profile"
+            onError={(e) => (e.target.src = defaultUserImage)} // Fallback image
+            className="w-32 h-32 rounded-full mb-4"
+          />
             <h2 className="text-xl font-bold">{user.name}</h2>
             <p className="text-gray-500">{user.email}</p>
             {role === 'organization' ? (

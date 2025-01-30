@@ -1,16 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-// Create User Context
 const UserContext = createContext();
 
 export const useUser = () => useContext(UserContext);
 
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // Track logged-in user (individual or organization)
-  const [userProfile, setUserProfile] = useState(null); // Store user or organization profile
-  const [role, setRole] = useState(null); // Track role ('individual' or 'organization')
-  const [loading, setLoading] = useState(true); // Track loading state
-  const [error, setError] = useState(null); // Track error messages
+  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [role, setRole] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Function to register user or organization
   const registerUser = async (data) => {
@@ -77,7 +76,7 @@ export const UserProvider = ({ children }) => {
         const account = loginData.account;
         setUser(account);
         setUserProfile(account);
-        setRole(loginData.role); // Set role based on server response
+        setRole(loginData.role);
         setError(null);
       } else {
         const errorData = await response.json();
@@ -90,7 +89,7 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // Fetch user or organization profile when component mounts
+  // Fetch user or organization profile
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
@@ -99,7 +98,7 @@ export const UserProvider = ({ children }) => {
           const profileData = await response.json();
           setUser(profileData);
           setUserProfile(profileData);
-          setRole(profileData.role || 'individual'); // Default to 'individual' if role not specified
+          setRole(profileData.role || 'individual');
         } else {
           console.error('No profile data found.');
         }

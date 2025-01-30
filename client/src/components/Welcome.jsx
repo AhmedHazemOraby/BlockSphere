@@ -5,7 +5,7 @@ const Welcome = () => {
   const navigate = useNavigate();
 
   const handleSignUp = () => {
-    navigate('/profile-setup');  // Redirect to profile setup page
+    navigate('/profile-setup'); 
   };
 
   return (
@@ -20,7 +20,7 @@ const Welcome = () => {
           </p>
           <button
             type="button"
-            onClick={handleSignUp}  // Navigate to the profile setup page
+            onClick={handleSignUp} 
             className="flex flex-row justify-center items-center my-5 bg-[#ffde00] p-3 rounded-full cursor-pointer hover:bg-[#e6c200]"
           >
             <p className="text-black text-base font-semibold">Sign Up</p>

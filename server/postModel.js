@@ -1,10 +1,14 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const postSchema = new mongoose.Schema({
-  user: { type: String, required: true }, // The user's email or ID
-  content: { type: String, required: true }, // The post content
-  image: String, // Optional image URL
-  createdAt: { type: Date, default: Date.now }, // Timestamp of post creation
-});
+const postSchema = new mongoose.Schema(
+  {
+    user: { type: String, required: true },
+    content: { type: String, required: true },
+    image: { type: String, default: null },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-module.exports = mongoose.model('Post', postSchema);
+module.exports = mongoose.model("Post", postSchema);

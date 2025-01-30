@@ -9,8 +9,8 @@ import Login from './components/Login';
 import Network from './components/Network';
 import Profile from './components/Profile';
 import Jobs from './components/Jobs';
-import OrganizationJobs from './components/OrganizationJobs'; // New component
-import OrganizationProfile from './components/OrganizationProfile'; // New component
+import OrganizationJobs from './components/OrganizationJobs';
+import OrganizationProfile from './components/OrganizationProfile';
 
 const App = () => {
   return (

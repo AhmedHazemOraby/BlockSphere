@@ -1,77 +1,50 @@
-const express = require('express');
-const Post = require('./postModel'); // Import the Post model
-const ipfsClient = require('ipfs-http-client').create({ url: 'http://localhost:5001/api/v0' }); // IPFS for image upload
-
+const express = require("express");
+const multer = require("multer");
+const { uploadToPinata } = require("./utils/pinataClient");
+const Post = require("./postModel");
 const router = express.Router();
 
-// Create a new post
-router.post('/api/posts', async (req, res) => {
-  const { user, content, image } = req.body;
+// Multer Configuration
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Create a new post (Handles text + optional image upload)
+router.post("/", upload.single("image"), async (req, res) => {
+  const { user, content } = req.body;
+  let image = null;
 
   try {
-    let imageUrl = '';
-
-    // If image is provided, upload to IPFS
-    if (image) {
-      const added = await ipfsClient.add(image);
-      imageUrl = `http://localhost:8080/ipfs/${added.path}`;
+    // Ensure required fields are present
+    if (!user || !content) {
+      return res.status(400).json({ message: "User and content are required" });
     }
 
-    const newPost = new Post({
-      user,
-      content,
-      image: imageUrl, // Save the image URL from IPFS
-    });
+    // Upload image to Pinata only if it exists
+    if (req.file) {
+      console.log("Uploading image to Pinata...");
+      image = await uploadToPinata(req.file.buffer, req.file.originalname);
+      console.log("Image uploaded to Pinata:", image);
+    }
 
-    await newPost.save();
-    res.status(201).json(newPost);
+    // Save the post in the database
+    const newPost = new Post({ user, content, image });
+    const savedPost = await newPost.save();
+
+    console.log("Post successfully created:", savedPost);
+    res.status(201).json(savedPost);
   } catch (error) {
-    console.error('Error creating post:', error);
-    res.status(500).json({ message: 'Error creating post' });
+    console.error("Error creating post:", error.message);
+    res.status(500).json({ message: "Error creating post", error: error.message });
   }
 });
 
-// Fetch all posts
-router.get('/api/posts', async (req, res) => {
+// Fetch all posts (Sorted by latest)
+router.get("/", async (req, res) => {
   try {
-    const posts = await Post.find().sort({ createdAt: -1 }); // Latest posts first
+    const posts = await Post.find().sort({ createdAt: -1 });
     res.status(200).json(posts);
   } catch (error) {
-    console.error('Error fetching posts:', error);
-    res.status(500).json({ message: 'Error fetching posts' });
-  }
-});
-
-// Update a post by ID
-router.put('/api/posts/:id', async (req, res) => {
-  const { content } = req.body;
-  const { id } = req.params;
-
-  try {
-    const updatedPost = await Post.findByIdAndUpdate(id, { content }, { new: true });
-    if (!updatedPost) {
-      return res.status(404).json({ message: 'Post not found' });
-    }
-    res.status(200).json(updatedPost);
-  } catch (error) {
-    console.error('Error updating post:', error);
-    res.status(500).json({ message: 'Error updating post' });
-  }
-});
-
-// Delete a post by ID
-router.delete('/api/posts/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const deletedPost = await Post.findByIdAndDelete(id);
-    if (!deletedPost) {
-      return res.status(404).json({ message: 'Post not found' });
-    }
-    res.status(200).json({ message: 'Post deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting post:', error);
-    res.status(500).json({ message: 'Error deleting post' });
+    console.error("Error fetching posts:", error.message);
+    res.status(500).json({ message: "Error fetching posts", error: error.message });
   }
 });
 

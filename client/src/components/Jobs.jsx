@@ -1,29 +1,29 @@
 import React, { useEffect, useState } from 'react';
 
 const Jobs = () => {
-  const [jobs, setJobs] = useState([]); // Store fetched jobs
-  const [error, setError] = useState(null); // Store any errors
-  const [loading, setLoading] = useState(true); // Track loading state
+  const [jobs, setJobs] = useState([]);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const fetchJobs = async () => {
     try {
-      const response = await fetch('/api/jobs'); // Ensure this matches your API endpoint
+      const response = await fetch('/api/jobs');
       if (!response.ok) {
         throw new Error(`Failed to fetch jobs: ${response.statusText}`);
       }
-      const data = await response.json(); // Parse JSON data
-      setJobs(data); // Update state with fetched jobs
-      setError(null); // Clear any previous errors
+      const data = await response.json();
+      setJobs(data);
+      setError(null);
     } catch (err) {
       console.error('Error fetching jobs:', err.message);
-      setError(err.message); // Set error message
+      setError(err.message);
     } finally {
-      setLoading(false); // Stop loading spinner
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchJobs(); // Fetch jobs on component mount
+    fetchJobs();
   }, []);
 
   return (

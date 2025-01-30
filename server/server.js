@@ -1,4 +1,4 @@
-require('dotenv').config();
+require("dotenv").config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -6,6 +6,10 @@ const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const multer = require('multer');
 const path = require('path');
+
+// Import postRoutes
+const postRoutes = require('./postRoutes');
+const { uploadToPinata } = require('./utils/pinataClient');
 
 const app = express();
 
@@ -18,23 +22,15 @@ app.use(
   })
 );
 app.use(bodyParser.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Multer Configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
-    cb(null, `profile-${uniqueSuffix}`);
-  },
-});
-const upload = multer({ storage });
+const upload = multer({ storage: multer.memoryStorage() });
 
 // MongoDB Connection
 mongoose
-  .connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected successfully'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
@@ -43,7 +39,7 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, unique: true, required: true },
   password: { type: String, required: true },
-  photoUrl: String,
+  photoUrl: { type: String },
   workplace: String,
   degrees: String,
   certifications: String,
@@ -54,63 +50,35 @@ const organizationSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, unique: true, required: true },
   password: { type: String, required: true },
-  photoUrl: String,
+  photoUrl: { type: String },
   establishedSince: Date,
   numWorkers: Number,
   accolades: String,
 }, { timestamps: true });
 
-const postSchema = new mongoose.Schema({
-  user: String,
-  content: String,
-  image: String,
-  createdAt: { type: Date, default: Date.now },
-}, { timestamps: true });
-
-const User = mongoose.model('User', userSchema);
-const Organization = mongoose.model('Organization', organizationSchema);
-const Post = mongoose.model('Post', postSchema);
+const userModel = mongoose.model('User', userSchema);
+const organizationModel = mongoose.model('Organization', organizationSchema);
 
 // Routes
-
 // User and Organization Registration
-app.post('/api/register', async (req, res) => {
-  const { name, email, password, photoUrl, role, establishedSince, numWorkers, accolades } = req.body;
-
+app.post("/api/register", upload.single("photo"), async (req, res) => {
+  const { name, email, password, role, establishedSince, numWorkers, accolades } = req.body;
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
+    let photoUrl = req.file ? await uploadToPinata(req.file.buffer, req.file.originalname) : null;
 
-    if (role === 'organization') {
-      const existingOrganization = await Organization.findOne({ email });
-      if (existingOrganization) {
-        return res.status(400).json({ message: 'Organization already exists' });
-      }
+    const userData = { name, email, password: hashedPassword, photoUrl };
+    if (role === "organization") Object.assign(userData, { establishedSince, numWorkers, accolades });
 
-      const organization = new Organization({
-        name,
-        email,
-        password: hashedPassword,
-        photoUrl,
-        establishedSince,
-        numWorkers,
-        accolades,
-      });
+    const savedEntity =
+      role === "organization"
+        ? await new organizationModel(userData).save()
+        : await new userModel(userData).save();
 
-      await organization.save();
-      return res.status(201).json({ message: 'Organization registered successfully', organization });
-    } else {
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        return res.status(400).json({ message: 'User already exists' });
-      }
-
-      const user = new User({ name, email, password: hashedPassword, photoUrl });
-      await user.save();
-      return res.status(201).json({ message: 'User registered successfully', user });
-    }
+    res.status(201).json({ message: "Account registered successfully", entity: savedEntity });
   } catch (error) {
-    console.error('Error registering account:', error);
-    res.status(500).json({ message: 'Error registering account' });
+    console.error("Error registering account:", error.message);
+    res.status(500).json({ message: "Error registering account", error: error.message });
   }
 });
 
@@ -119,11 +87,11 @@ app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    let account = await User.findOne({ email });
+    let account = await userModel.findOne({ email });
     let role = 'individual';
 
     if (!account) {
-      account = await Organization.findOne({ email });
+      account = await organizationModel.findOne({ email });
       role = 'organization';
     }
 
@@ -151,8 +119,8 @@ app.get('/api/profile', async (req, res) => {
   try {
     const profile =
       role === 'organization'
-        ? await Organization.findOne({ email })
-        : await User.findOne({ email });
+        ? await organizationModel.findOne({ email })
+        : await userModel.findOne({ email });
 
     if (!profile) {
       return res.status(404).json({ message: `${role} not found` });
@@ -166,17 +134,17 @@ app.get('/api/profile', async (req, res) => {
 });
 
 // Update User or Organization Profile
-app.put('/api/profile', upload.single('photo'), async (req, res) => {
+app.put("/api/profile", upload.single("photo"), async (req, res) => {
   const { email, name, workplace, degrees, certifications, walletAddress, establishedSince, numWorkers, accolades, role } = req.body;
-  const photoUrl = req.file ? `/uploads/${req.file.filename}` : req.body.photoUrl;
-
   try {
+    let photoUrl = req.file ? await uploadToPinata(req.file.buffer, req.file.originalname) : req.body.photoUrl;
+
     const updateData =
-      role === 'organization'
+      role === "organization"
         ? { name, photoUrl, establishedSince, numWorkers, accolades }
         : { name, photoUrl, workplace, degrees, certifications, walletAddress };
 
-    const model = role === 'organization' ? Organization : User;
+    const model = role === "organization" ? organizationModel : userModel;
 
     const updatedProfile = await model.findOneAndUpdate({ email }, updateData, { new: true });
 
@@ -184,28 +152,32 @@ app.put('/api/profile', upload.single('photo'), async (req, res) => {
       return res.status(404).json({ message: `${role} not found` });
     }
 
-    res.status(200).json({ message: 'Profile updated successfully', updatedProfile });
+    res.status(200).json({ message: "Profile updated successfully", updatedProfile });
   } catch (error) {
-    console.error('Error updating profile:', error);
-    res.status(500).json({ message: 'Error updating profile' });
+    console.error("Error updating profile:", error.message);
+    res.status(500).json({ message: "Error updating profile", error: error.message });
   }
 });
 
-// Fetch Posts
-app.get('/api/posts', async (req, res) => {
+// Upload Endpoint
+app.post("/api/upload", upload.single("file"), async (req, res) => {
   try {
-    const posts = await Post.find().sort({ createdAt: -1 });
-    res.status(200).json(posts);
+    if (!req.file) {
+      return res.status(400).json({ message: "No file provided" });
+    }
+
+    const url = await uploadToPinata(req.file.buffer, req.file.originalname);
+    res.status(200).json({ url });
   } catch (error) {
-    console.error('Error fetching posts:', error);
-    res.status(500).json({ message: 'Error fetching posts' });
+    res.status(500).json({ message: "Failed to upload file", error: error.message });
   }
 });
+
+// Use postRoutes for handling posts
+app.use("/api/posts", postRoutes);
 
 // Handle 404 Errors
-app.use((req, res) => {
-  res.status(404).json({ message: 'Endpoint not found' });
-});
+app.use((req, res) => res.status(404).json({ message: "Endpoint not found" }));
 
 // Start Server
 const PORT = process.env.PORT || 5000;

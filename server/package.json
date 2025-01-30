@@ -11,6 +11,7 @@
   "description": "",
   "dependencies": {
     "@helia/core": "^0.0.0",
+    "@pinata/sdk": "^2.1.0",
     "axios": "^1.7.3",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.3",
