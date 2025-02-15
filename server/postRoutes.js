@@ -10,36 +10,27 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Create a new post (Handles text + optional image upload)
 router.post("/", upload.single("image"), async (req, res) => {
-  const { user, content } = req.body;
+  const { user, content, role } = req.body;
   let image = null;
 
   try {
-    if (!user || !content) {
-      return res.status(400).json({ message: "User and content are required" });
-    }
-
-    // Fetch user details for profile picture
-    const userDetails = await User.findOne({ name: user });
-    if (!userDetails) return res.status(404).json({ message: "User not found" });
+    if (!user || !content) return res.status(400).json({ message: "User and content are required" });
 
     if (req.file) {
       console.log("Uploading image to Pinata...");
       image = await uploadToPinata(req.file.buffer, req.file.originalname);
-      console.log("Image uploaded to Pinata:", image);
     }
 
-    // Save the post in the database
     const newPost = new Post({
       user,
-      userPhoto: userDetails.photoUrl || "", // Store user's profile photo
+      userPhoto: role === "organization" ? "organization-default.png" : req.body.userPhoto,
       content,
       image,
       likes: [],
-      comments: []
+      comments: [],
     });
 
     const savedPost = await newPost.save();
-    console.log("Post successfully created:", savedPost);
     res.status(201).json(savedPost);
   } catch (error) {
     console.error("Error creating post:", error.message);
