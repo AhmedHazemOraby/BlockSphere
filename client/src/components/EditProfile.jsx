@@ -52,25 +52,26 @@ const EditProfile = () => {
   const handleSave = async () => {
     try {
       let photoUrl = user.photoUrl;
-
       if (formData.photo) {
-        const uploadResponse = await uploadPhoto(formData.photo);
-        photoUrl = uploadResponse.photoUrl;
+        photoUrl = await uploadPhoto(formData.photo);
       }
-
+  
       const updatedData = {
         ...formData,
         photoUrl,
       };
-
+  
       await updateUserProfile(updatedData);
-      alert('Profile updated successfully!');
-      navigate('/profile');
+      alert("Profile updated successfully!");
+      
+      // ✅ Fix: Ensure profile page updates
+      navigate("/profile");
+      window.location.reload();
     } catch (error) {
-      console.error('Error updating profile:', error);
-      alert('Failed to update profile!');
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile!");
     }
-  };
+  };  
 
   const uploadPhoto = async (photo) => {
     const formData = new FormData();

@@ -69,9 +69,7 @@ const Profile = () => {
 
   const handleSave = async () => {
     try {
-      let photoUrl = formData.photo
-        ? await uploadPhoto(formData.photo)
-        : user.photoUrl;
+      let photoUrl = formData.photo ? await uploadPhoto(formData.photo) : user.photoUrl;
   
       const updatedData = {
         ...formData,
@@ -80,12 +78,15 @@ const Profile = () => {
       };
   
       await updateUserProfile(updatedData);
-      alert('Profile updated successfully!');
+      alert("Profile updated successfully!");
       setIsEditing(false);
+  
+      // ✅ Fix: Reload user data in UI after saving
+      window.location.reload();
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error("Error updating profile:", error);
     }
-  };  
+  };    
 
   const uploadPhoto = async (photo) => {
     const formData = new FormData();
@@ -130,7 +131,7 @@ const Profile = () => {
             <p className="text-gray-500">{user.email}</p>
             {role === 'organization' ? (
               <>
-                <p className="text-gray-500">Established Since: {user.establishedSince || 'N/A'}</p>
+                <p className="text-gray-500"> Established Since: {user.establishedSince ? new Date(user.establishedSince).getFullYear() : 'N/A'}</p>
                 <p className="text-gray-500">Number of Workers: {user.numWorkers || 'N/A'}</p>
                 <p className="text-gray-500">Accolades: {user.accolades || 'N/A'}</p>
               </>

@@ -40,27 +40,51 @@ export const UserProvider = ({ children }) => {
   // Function to update user or organization profile
   const updateUserProfile = async (data) => {
     try {
-      const response = await fetch('http://localhost:5000/api/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+      const formData = new FormData();
+      formData.append("name", data.name);
+      formData.append("email", data.email);
+      formData.append("role", data.role);
+  
+      if (data.photo) {
+        formData.append("photo", data.photo); // ✅ Fix: Ensure photo uploads
+      } else {
+        formData.append("photoUrl", data.photoUrl);
+      }
+  
+      if (data.role === "organization") {
+        formData.append("establishedSince", data.establishedSince);
+        formData.append("numWorkers", data.numWorkers);
+        formData.append("accolades", data.accolades);
+      } else {
+        formData.append("workplace", data.workplace);
+        formData.append("degrees", data.degrees);
+        formData.append("certifications", data.certifications);
+        formData.append("walletAddress", data.walletAddress);
+      }
+  
+      const response = await fetch("http://localhost:5000/api/profile", {
+        method: "PUT",
+        body: formData, // ✅ Fix: Send FormData instead of JSON
       });
-
+  
       if (response.ok) {
         const updatedData = await response.json();
-        const updatedAccount = updatedData.user || updatedData.organization;
+        const updatedAccount = updatedData.updatedProfile;
         setUser(updatedAccount);
         setUserProfile(updatedAccount);
         setError(null);
+        
+        // ✅ Fix: Reload UI after update
+        window.location.reload();
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message);
       }
     } catch (error) {
-      console.error('Error updating profile:', error.message);
+      console.error("Error updating profile:", error.message);
       setError(error.message);
     }
-  };
+  };    
 
   // Function to log in user or organization
   const loginUser = async (email, password) => {

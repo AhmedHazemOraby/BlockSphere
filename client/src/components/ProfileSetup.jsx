@@ -35,12 +35,6 @@ const ProfileSetup = () => {
         formData.append("photo", photo);
       }
   
-      if (isOrganization) {
-        formData.append("establishedSince", establishedSince);
-        formData.append("numWorkers", numWorkers);
-        formData.append("accolades", accolades);
-      }
-  
       console.log("Submitting form data to the backend:", formData);
   
       const response = await fetch("http://localhost:5000/api/register", {
@@ -117,40 +111,6 @@ const ProfileSetup = () => {
                 required
               />
             </div>
-            {isOrganization && (
-              <>
-                <div className="mb-4">
-                  <label className="block text-gray-700 mb-2">
-                    Established Since
-                  </label>
-                  <input
-                    type="date"
-                    value={establishedSince}
-                    onChange={(e) => setEstablishedSince(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 mb-2">
-                    Number of Workers
-                  </label>
-                  <input
-                    type="number"
-                    value={numWorkers}
-                    onChange={(e) => setNumWorkers(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 mb-2">Accolades</label>
-                  <textarea
-                    value={accolades}
-                    onChange={(e) => setAccolades(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
-                  ></textarea>
-                </div>
-              </>
-            )}
             <div className="mb-4">
               <label className="block text-gray-700 mb-2">
                 Profile Picture (optional)

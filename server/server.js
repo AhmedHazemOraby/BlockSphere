@@ -106,27 +106,30 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Fetch User or Organization Profile
-app.get('/api/profile', async (req, res) => {
-  const { email, role } = req.query;
-
+app.put("/api/profile", upload.single("photo"), async (req, res) => {
+  const { email, name, workplace, degrees, certifications, walletAddress, establishedSince, numWorkers, accolades, role } = req.body;
   try {
-    if (!email || !role) {
-      return res.status(400).json({ message: "Missing email or role" });
-    }
+    // ✅ Fix: Ensure we process images properly
+    let photoUrl = req.file ? await uploadToPinata(req.file.buffer, req.file.originalname) : req.body.photoUrl;
 
-    const profile =
-      role === 'organization'
-        ? await organizationModel.findOne({ email })
-        : await User.findOne({ email }); // ✅ Fixed model reference
+    // ✅ Fix: Ensure the correct data model is used based on role
+    const updateData =
+      role === "organization"
+        ? { name, photoUrl, establishedSince, numWorkers, accolades }
+        : { name, photoUrl, workplace, degrees, certifications, walletAddress };
 
-    if (!profile) {
+    const model = role === "organization" ? organizationModel : User; // ✅ Fix reference
+
+    const updatedProfile = await model.findOneAndUpdate({ email }, updateData, { new: true });
+
+    if (!updatedProfile) {
       return res.status(404).json({ message: `${role} not found` });
     }
 
-    res.status(200).json(profile);
+    res.status(200).json({ message: "Profile updated successfully", updatedProfile });
   } catch (error) {
-    console.error('Error fetching profile:', error);
-    res.status(500).json({ message: 'Error fetching profile', error: error.message });
+    console.error("Error updating profile:", error.message);
+    res.status(500).json({ message: "Error updating profile", error: error.message });
   }
 });
 
