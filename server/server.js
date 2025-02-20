@@ -34,15 +34,16 @@ mongoose
   .then(() => console.log('MongoDB connected successfully'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-const organizationSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, unique: true, required: true },
-  password: { type: String, required: true },
-  photoUrl: { type: String },
-  establishedSince: Date,
-  numWorkers: Number,
-  accolades: String,
-}, { timestamps: true });
+  const organizationSchema = new mongoose.Schema({
+    name: { type: String, required: true },
+    email: { type: String, unique: true, required: true },
+    password: { type: String, required: true },
+    photoUrl: { type: String },
+    organizationType: { type: String, enum: ["Business", "Education", "Other"], required: true }, // ✅ Added this
+    establishedSince: Date,
+    numWorkers: Number,
+    accolades: String,
+  }, { timestamps: true });
 
 const User = require("./userModel"); 
 const organizationModel = mongoose.model('Organization', organizationSchema);
@@ -50,7 +51,8 @@ const organizationModel = mongoose.model('Organization', organizationSchema);
 // Routes
 // User and Organization Registration
 app.post("/api/register", upload.single("photo"), async (req, res) => {
-  const { name, email, password, role, establishedSince, numWorkers, accolades } = req.body;
+  const { name, email, password, role, organizationType } = req.body;
+
   try {
     if (!name || !email || !password || !role) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -59,14 +61,19 @@ app.post("/api/register", upload.single("photo"), async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     let photoUrl = req.file ? await uploadToPinata(req.file.buffer, req.file.originalname) : null;
 
-    const userData = { name, email, password: hashedPassword, photoUrl };
-    if (role === "organization") Object.assign(userData, { establishedSince, numWorkers, accolades });
+    let savedEntity;
 
-    // ✅ Ensure we use `User` instead of redefining userModel
-    const savedEntity =
-      role === "organization"
-        ? await new organizationModel(userData).save()
-        : await User.create(userData); // ✅ FIXED
+    if (role === "organization") {
+      if (!organizationType) {
+        return res.status(400).json({ message: "Organization type is required" });
+      }
+
+      const organizationData = { name, email, password: hashedPassword, photoUrl, organizationType };
+      savedEntity = await new organizationModel(organizationData).save();
+    } else {
+      const userData = { name, email, password: hashedPassword, photoUrl };
+      savedEntity = await new User(userData).save();
+    }
 
     res.status(201).json({ message: "Account registered successfully", entity: savedEntity });
   } catch (error) {

@@ -131,6 +131,7 @@ const Profile = () => {
             <p className="text-gray-500">{user.email}</p>
             {role === 'organization' ? (
               <>
+                <p className="text-gray-500">Organization Type: {user.organizationType || "Not specified"}</p>
                 <p className="text-gray-500"> Established Since: {user.establishedSince ? new Date(user.establishedSince).getFullYear() : 'N/A'}</p>
                 <p className="text-gray-500">Number of Workers: {user.numWorkers || 'N/A'}</p>
                 <p className="text-gray-500">Accolades: {user.accolades || 'N/A'}</p>
@@ -143,6 +144,7 @@ const Profile = () => {
                 <p className="text-gray-500">Wallet: {user.walletAddress || 'Not connected'}</p>
               </>
             )}
+
             <button
               onClick={connectWallet}
               className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600"

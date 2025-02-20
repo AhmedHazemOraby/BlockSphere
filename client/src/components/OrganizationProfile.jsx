@@ -24,6 +24,11 @@ const OrganizationProfile = () => {
         </div>
         <div className="mb-4">
           <p>
+            <strong>Organization Type:</strong> {user.organizationType || "Not specified"}
+          </p>
+          </div>
+        <div className="mb-4">
+          <p>
             <strong>Established Since:</strong> {user.establishedSince}
           </p>
         </div>
