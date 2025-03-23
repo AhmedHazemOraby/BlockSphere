@@ -10,6 +10,18 @@ export const UserProvider = ({ children }) => {
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    if (user && role === "organization") {
+      fetch(`http://localhost:5000/api/get-organization-notifications/${user._id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setNotifications(data);
+        })
+        .catch((err) => console.error("Error fetching notifications:", err));
+    }
+  }, [user]);
 
   // Function to register user or organization
   const registerUser = async (data) => {
@@ -37,6 +49,31 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  const uploadResumeToIPFS = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch('http://localhost:5000/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await response.json();
+    return data.url; // IPFS URL
+  };
+
+  const applyToJob = async (jobId, resumeUrl, email, phone) => {
+    const response = await fetch(`http://localhost:5000/api/jobs/${jobId}/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user._id,
+        resumeUrl,
+        email,
+        phone,
+      }),
+    });
+    return response.json();
+  };  
+  
   // Function to update user or organization profile
   const updateUserProfile = async (data) => {
     try {
@@ -46,7 +83,7 @@ export const UserProvider = ({ children }) => {
       formData.append("role", data.role);
   
       if (data.photo) {
-        formData.append("photo", data.photo); // ✅ Fix: Ensure photo uploads
+        formData.append("photo", data.photo);
       } else {
         formData.append("photoUrl", data.photoUrl);
       }
@@ -64,7 +101,7 @@ export const UserProvider = ({ children }) => {
   
       const response = await fetch("http://localhost:5000/api/profile", {
         method: "PUT",
-        body: formData, // ✅ Fix: Send FormData instead of JSON
+        body: formData,
       });
   
       if (response.ok) {
@@ -74,7 +111,6 @@ export const UserProvider = ({ children }) => {
         setUserProfile(updatedAccount);
         setError(null);
         
-        // ✅ Fix: Reload UI after update
         window.location.reload();
       } else {
         const errorData = await response.json();
@@ -84,9 +120,9 @@ export const UserProvider = ({ children }) => {
       console.error("Error updating profile:", error.message);
       setError(error.message);
     }
-  };    
+  };
 
-  // Function to log in user or organization
+  // Function to log in user or organization (Email & Password)
   const loginUser = async (email, password) => {
     try {
       const response = await fetch('http://localhost:5000/api/login', {
@@ -112,6 +148,39 @@ export const UserProvider = ({ children }) => {
       throw error;
     }
   };
+
+  // ✅ New Function: Log in using MetaMask Wallet
+  const loginWithWallet = async (walletAddress) => {
+    try {
+        const response = await fetch("http://localhost:5000/api/login-metamask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ walletAddress }),
+        });
+
+        const loginData = await response.json();
+
+        if (!response.ok) {
+            throw new Error(loginData.message || "Wallet login failed");
+        }
+
+        // ✅ Ensure response contains user and role
+        if (!loginData.user || !loginData.role) {
+            throw new Error("Invalid response from server: Missing user or role");
+        }
+
+        console.log("MetaMask Login Successful:", loginData);
+
+        setUser(loginData.user);
+        setUserProfile(loginData.user);
+        setRole(loginData.role); // ✅ Fix: Set the correct role
+        setError(null);
+    } catch (error) {
+        console.error("Error logging in with wallet:", error.message);
+        setError(error.message);
+        throw error;
+    }
+};
 
   // Fetch user or organization profile
   useEffect(() => {
@@ -144,17 +213,21 @@ export const UserProvider = ({ children }) => {
   };
 
   return (
-    <UserContext.Provider
+        <UserContext.Provider
       value={{
         user,
         userProfile,
         role,
+        notifications,
         registerUser,
         updateUserProfile,
         loginUser,
+        loginWithWallet,
         logoutUser,
         loading,
         error,
+        uploadResumeToIPFS,
+        applyToJob,
       }}
     >
       {children}

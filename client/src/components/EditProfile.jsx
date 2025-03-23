@@ -16,13 +16,19 @@ const EditProfile = () => {
     walletAddress: user?.walletAddress || '',
   });
 
-  const [walletConnected, setWalletConnected] = useState(!!user?.walletAddress);
-
   useEffect(() => {
-    if (user?.walletAddress) {
-      setWalletConnected(true);
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+        workplace: user.workplace || '',
+        degrees: user.degrees || '',
+        certifications: user.certifications || '',
+        walletAddress: user.walletAddress || '',
+      }));
     }
-  }, [user?.walletAddress]);
+  }, [user]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -33,45 +39,29 @@ const EditProfile = () => {
     setFormData((prev) => ({ ...prev, photo: e.target.files[0] }));
   };
 
-  const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        setFormData((prev) => ({ ...prev, walletAddress: accounts[0] }));
-        setWalletConnected(true);
-        alert('Wallet connected successfully!');
-      } catch (error) {
-        console.error('Error connecting wallet:', error);
-        alert('Error connecting wallet!');
-      }
-    } else {
-      alert('Please install MetaMask to connect your wallet!');
-    }
-  };
-
   const handleSave = async () => {
     try {
       let photoUrl = user.photoUrl;
       if (formData.photo) {
         photoUrl = await uploadPhoto(formData.photo);
       }
-  
+
       const updatedData = {
         ...formData,
         photoUrl,
       };
-  
+
       await updateUserProfile(updatedData);
       alert("Profile updated successfully!");
-      
-      // ✅ Fix: Ensure profile page updates
+
+      // ✅ Ensure profile page updates
       navigate("/profile");
       window.location.reload();
     } catch (error) {
       console.error("Error updating profile:", error);
       alert("Failed to update profile!");
     }
-  };  
+  };
 
   const uploadPhoto = async (photo) => {
     const formData = new FormData();
@@ -151,16 +141,6 @@ const EditProfile = () => {
             onChange={handleInputChange}
             className="w-full p-2 border border-gray-300 rounded"
           />
-        </div>
-        <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Wallet Address</label>
-          <p className="text-gray-500">{formData.walletAddress || 'Not connected'}</p>
-          <button
-            onClick={connectWallet}
-            className="mt-2 bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600"
-          >
-            {walletConnected ? 'Wallet Connected' : 'Connect Wallet'}
-          </button>
         </div>
         <button
           onClick={handleSave}

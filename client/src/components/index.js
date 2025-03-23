@@ -7,3 +7,4 @@ export { default as Home } from './Home';
 export { default as ProfileSetup } from './ProfileSetup';
 export { default as Profile } from './Profile';
 export { default as EditProfile } from './EditProfile';
+export { default as UploadCertfiicate } from './UploadCertfiicate';

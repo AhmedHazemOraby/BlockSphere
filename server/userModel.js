@@ -5,11 +5,11 @@ const User = mongoose.models.User || mongoose.model("User", new mongoose.Schema(
   name: { type: String, required: true },
   email: { type: String, unique: true, required: true },
   password: { type: String, required: true },
-  photoUrl: { type: String, default: "" }, // Stores profile picture
+  photoUrl: { type: String, default: "" },
   workplace: String,
   degrees: String,
   certifications: String,
-  walletAddress: String,
+  walletAddress: { type: String, unique: true, required: true }, // ✅ Ensure wallet is unique
 }, { timestamps: true }));
 
 module.exports = User;

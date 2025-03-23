@@ -6,26 +6,57 @@ import defaultUserImage from '../../images/defaultUserImage.png';
 const Profile = () => {
   const navigate = useNavigate();
   const { user, role, updateUserProfile } = useUser();
+  const [certificates, setCertificates] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
+    name: "",
+    email: "",
     photo: null,
-    workplace: user?.workplace || '',
-    degrees: user?.degrees || '',
-    certifications: user?.certifications || '',
-    walletAddress: user?.walletAddress || '',
-    establishedSince: user?.establishedSince || '',
-    numWorkers: user?.numWorkers || '',
-    accolades: user?.accolades || '',
+    workplace: "",
+    degrees: "",
+    certifications: "",
+    walletAddress: "",
+    establishedSince: "",
+    numWorkers: "",
+    accolades: "",
   });
 
-  const [walletConnected, setWalletConnected] = useState(!!user?.walletAddress);
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || "",
+        email: user.email || "",
+        workplace: user.workplace || "",
+        degrees: user.degrees || "",
+        certifications: user.certifications || "",
+        walletAddress: user.walletAddress || "",
+        establishedSince: user.establishedSince || "",
+        numWorkers: user.numWorkers || "",
+        accolades: user.accolades || "",
+      });
+
+      // ✅ Ensure user ID exists before fetching certificates
+      if (user._id) {
+        fetchVerifiedCertificates(user._id);
+      }
+    }
+  }, [user]);
+
+  // ✅ Function to fetch verified certificates
+  const fetchVerifiedCertificates = async (userId) => {
+    try {
+      const response = await fetch(`/api/get-verified-certificates/${userId}`);
+      if (!response.ok) throw new Error("Failed to fetch certificates");
+      const data = await response.json();
+      setCertificates(data);
+    } catch (error) {
+      console.error("Error fetching certificates:", error);
+    }
+  };
 
   const sanitizedPhotoUrl = user?.photoUrl
-  ? user.photoUrl.replace('http://localhost:8080', 'https://gateway.pinata.cloud/ipfs')
-  : defaultUserImage;
-
+    ? user.photoUrl.replace('http://localhost:8080', 'https://gateway.pinata.cloud/ipfs')
+    : defaultUserImage;
 
   useEffect(() => {
     if (user) {
@@ -53,40 +84,26 @@ const Profile = () => {
     setFormData((prev) => ({ ...prev, photo: e.target.files[0] }));
   };
 
-  const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        setFormData((prev) => ({ ...prev, walletAddress: accounts[0] }));
-        setWalletConnected(true);
-      } catch (error) {
-        console.error('Error connecting wallet:', error);
-      }
-    } else {
-      alert('Please install MetaMask to connect your wallet!');
-    }
-  };
-
   const handleSave = async () => {
     try {
       let photoUrl = formData.photo ? await uploadPhoto(formData.photo) : user.photoUrl;
-  
+
       const updatedData = {
         ...formData,
         photoUrl,
         role,
       };
-  
+
       await updateUserProfile(updatedData);
       alert("Profile updated successfully!");
       setIsEditing(false);
-  
+
       // ✅ Fix: Reload user data in UI after saving
       window.location.reload();
     } catch (error) {
       console.error("Error updating profile:", error);
     }
-  };    
+  };
 
   const uploadPhoto = async (photo) => {
     const formData = new FormData();
@@ -121,18 +138,18 @@ const Profile = () => {
       {!isEditing ? (
         <div className="bg-white shadow-md rounded-lg p-6 w-full max-w-md">
           <div className="flex flex-col items-center">
-          <img
-            src={sanitizedPhotoUrl}
-            alt="Profile"
-            onError={(e) => (e.target.src = defaultUserImage)} // Fallback image
-            className="w-32 h-32 rounded-full mb-4"
-          />
+            <img
+              src={sanitizedPhotoUrl}
+              alt="Profile"
+              onError={(e) => (e.target.src = defaultUserImage)} // Fallback image
+              className="w-32 h-32 rounded-full mb-4"
+            />
             <h2 className="text-xl font-bold">{user.name}</h2>
             <p className="text-gray-500">{user.email}</p>
             {role === 'organization' ? (
               <>
                 <p className="text-gray-500">Organization Type: {user.organizationType || "Not specified"}</p>
-                <p className="text-gray-500"> Established Since: {user.establishedSince ? new Date(user.establishedSince).getFullYear() : 'N/A'}</p>
+                <p className="text-gray-500">Established Since: {user.establishedSince ? new Date(user.establishedSince).getFullYear() : 'N/A'}</p>
                 <p className="text-gray-500">Number of Workers: {user.numWorkers || 'N/A'}</p>
                 <p className="text-gray-500">Accolades: {user.accolades || 'N/A'}</p>
               </>
@@ -141,16 +158,8 @@ const Profile = () => {
                 <p className="text-gray-500">Workplace: {user.workplace || 'N/A'}</p>
                 <p className="text-gray-500">Degrees: {user.degrees || 'N/A'}</p>
                 <p className="text-gray-500">Certifications: {user.certifications || 'N/A'}</p>
-                <p className="text-gray-500">Wallet: {user.walletAddress || 'Not connected'}</p>
               </>
             )}
-
-            <button
-              onClick={connectWallet}
-              className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600"
-            >
-              {walletConnected ? 'Wallet Connected' : 'Connect Wallet'}
-            </button>
           </div>
           <button
             onClick={() => setIsEditing(true)}
@@ -227,14 +236,33 @@ const Profile = () => {
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Certifications</label>
-                <input
-                  type="text"
-                  name="certifications"
-                  value={formData.certifications}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded"
-                />
+              {/* Upload Certificate Button */}
+              <div className="mt-4">
+                <button
+                  onClick={() => navigate("/upload-certificate")} // Redirects to UploadCertificate.jsx
+                  className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                >
+                  Upload Certificate
+                </button>
+              </div>
+
+              {/* Verified Certificates Section */}
+              <h3 className="text-lg font-bold mt-4">Verified Certificates</h3>
+              <ul>
+                {certificates.length > 0 ? (
+                  certificates.map((cert) => (
+                    <li key={cert._id} className="mt-2 border p-2 rounded shadow-sm bg-white">
+                      <img src={cert.certificateUrl} alt="Certificate" className="w-full max-w-xs rounded-md" />
+                      <p className="text-gray-600">{cert.description}</p>
+                      <p className="text-sm text-gray-500">
+                        Verified by: <span className="font-semibold">{cert.organizationId.name}</span>
+                      </p>
+                    </li>
+                  ))
+                ) : (
+                  <p className="text-gray-500">No verified certificates yet.</p>
+                )}
+              </ul>
               </div>
             </>
           )}
@@ -243,12 +271,6 @@ const Profile = () => {
             className="w-full bg-green-500 text-white py-2 px-4 rounded-full hover:bg-green-600 mt-2"
           >
             Save Changes
-          </button>
-          <button
-            onClick={() => setIsEditing(false)}
-            className="w-full bg-red-500 text-white py-2 px-4 rounded-full hover:bg-red-600 mt-2"
-          >
-            Cancel
           </button>
         </div>
       )}

@@ -9,6 +9,7 @@ const ProfileSetup = () => {
   const [photo, setPhoto] = useState(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
   const [establishedSince, setEstablishedSince] = useState('');
   const [numWorkers, setNumWorkers] = useState('');
   const [accolades, setAccolades] = useState('');
@@ -21,49 +22,67 @@ const ProfileSetup = () => {
     setPhoto(e.target.files[0]);
   };
 
+  const connectWallet = async () => {
+    if (window.ethereum) {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        setWalletAddress(accounts[0]);
+      } catch (error) {
+        console.error("Wallet connection failed:", error);
+        setError("Failed to connect wallet.");
+      }
+    } else {
+      setError("Please install MetaMask to use this feature.");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    try {
-        const formData = new FormData();
-        formData.append("name", name);
-        formData.append("email", email);
-        formData.append("password", password);
-        formData.append("role", isOrganization ? "organization" : "individual");
-
-        if (photo) {
-            formData.append("photo", photo);
-        }
-
-        if (isOrganization) {
-            formData.append("organizationType", organizationType); // ✅ Include organization type
-        }
-
-        console.log("Submitting form data to the backend:", formData);
-
-        const response = await fetch("http://localhost:5000/api/register", {
-            method: "POST",
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error("Register API error:", errorData);
-            throw new Error(errorData.message || "Failed to register account");
-        }
-
-        const responseData = await response.json();
-        console.log("Account registered successfully:", responseData);
-
-        navigate("/home");
-    } catch (error) {
-        console.error("Error creating profile:", error.message);
-        setError(error.message || "Failed to create profile.");
-    } finally {
-        setLoading(false);
+    if (!walletAddress) {
+      setError("Please connect your wallet before signing up.");
+      setLoading(false);
+      return;
     }
-};                   
+
+    try {
+      const formData = new FormData();
+      formData.append("name", name);
+      formData.append("email", email);
+      formData.append("password", password);
+      formData.append("walletAddress", walletAddress); // ✅ Include wallet address
+      formData.append("role", isOrganization ? "organization" : "individual");
+
+      if (photo) {
+        formData.append("photo", photo);
+      }
+
+      if (isOrganization) {
+        formData.append("organizationType", organizationType);
+      }
+
+      console.log("Submitting form data to the backend:", formData);
+
+      const response = await fetch("http://localhost:5000/api/register", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to register account");
+      }
+
+      alert("Signup successful!");
+      navigate("/home");
+    } catch (error) {
+      console.error("Error creating profile:", error.message);
+      setError(error.message || "Failed to create profile.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -75,7 +94,6 @@ const ProfileSetup = () => {
           <form onSubmit={handleSubmit}>
             {error && <p className="text-red-500 mb-4">{error}</p>}
             
-            {/* Organization Checkbox */}
             <div className="mb-4">
               <label className="block text-gray-700 mb-2">
                 Are you an organization?
@@ -89,7 +107,6 @@ const ProfileSetup = () => {
               <span>{isOrganization ? 'Yes' : 'No'}</span>
             </div>
 
-            {/* Organization Type Dropdown (Only visible for organizations) */}
             {isOrganization && (
               <div className="mb-4">
                 <label className="block text-gray-700 mb-2">Type of Organization</label>
@@ -107,7 +124,6 @@ const ProfileSetup = () => {
               </div>
             )}
 
-            {/* Name Field */}
             <div className="mb-4">
               <label className="block text-gray-700 mb-2">Name</label>
               <input
@@ -119,7 +135,6 @@ const ProfileSetup = () => {
               />
             </div>
 
-            {/* Email Field */}
             <div className="mb-4">
               <label className="block text-gray-700 mb-2">Email</label>
               <input
@@ -131,7 +146,6 @@ const ProfileSetup = () => {
               />
             </div>
 
-            {/* Password Field */}
             <div className="mb-4">
               <label className="block text-gray-700 mb-2">Password</label>
               <input
@@ -143,7 +157,15 @@ const ProfileSetup = () => {
               />
             </div>
 
-            {/* Profile Picture Upload */}
+            <div className="mb-4">
+              <label className="block text-gray-700 mb-2">Wallet Address</label>
+              <p className="text-gray-500">{walletAddress || "Not connected"}</p>
+              <button type="button" onClick={connectWallet}
+                className="mt-2 bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600">
+                {walletAddress ? "Wallet Connected" : "Connect Wallet"}
+              </button>
+            </div>
+
             <div className="mb-4">
               <label className="block text-gray-700 mb-2">
                 Profile Picture (optional)
@@ -156,10 +178,10 @@ const ProfileSetup = () => {
               />
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               className="w-full bg-[#ffde00] text-black py-2 px-4 rounded-full hover:bg-[#e6c200]"
+              disabled={!walletAddress}
             >
               Create Profile
             </button>

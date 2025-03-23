@@ -6,6 +6,11 @@ const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const multer = require('multer');
 const path = require('path');
+const User = require("./userModel");
+const Notification = require("./notificationModel");
+const Job = require('./jobModel');
+const Application = require('./applicationModel');
+
 
 // Import postRoutes
 const postRoutes = require('./postRoutes');
@@ -39,22 +44,346 @@ mongoose
     email: { type: String, unique: true, required: true },
     password: { type: String, required: true },
     photoUrl: { type: String },
-    organizationType: { type: String, enum: ["Business", "Education", "Other"], required: true }, // ✅ Added this
+    walletAddress: { type: String, unique: true, required: true },
+    organizationType: { type: String, enum: ["Business", "Education", "Other"], required: true },
     establishedSince: Date,
     numWorkers: Number,
     accolades: String,
   }, { timestamps: true });
+  
+  const organizationModel = mongoose.model('Organization', organizationSchema);  
+  const Certificate = require("./certificateModel"); // Import certificate model
 
-const User = require("./userModel"); 
-const organizationModel = mongoose.model('Organization', organizationSchema);
+// Endpoint: Upload Certificate (Pending)
+app.post("/api/upload-certificate", upload.single("certificate"), async (req, res) => {
+  const { userId, organizationId, description } = req.body;
+
+  try {
+    console.log("🔍 Upload Request Body:", req.body);
+    console.log("📂 Uploaded File:", req.file);
+
+    if (!userId || !organizationId || !req.file || !description) {
+      console.error("❌ Missing required fields:", { userId, organizationId, reqFile: req.file, description });
+      return res.status(400).json({ message: "⚠️ Missing required fields" });
+    }
+
+    // ✅ Upload certificate to Pinata
+    const ipfsUrl = await uploadToPinata(req.file.buffer, req.file.originalname);
+    console.log("✅ Uploaded to IPFS:", ipfsUrl);
+
+    // ✅ Store certificate as "unpaid"
+    const newCertificate = new Certificate({
+      userId,
+      organizationId,
+      certificateUrl: ipfsUrl,
+      description,
+      status: "unpaid",
+    });
+
+    await newCertificate.save();
+
+    res.status(201).json({ message: "✅ Certificate uploaded successfully. Awaiting payment.", certificate: newCertificate });
+  } catch (error) {
+    console.error("❌ Error uploading certificate:", error.message);
+    res.status(500).json({ message: "❌ Error uploading certificate", error: error.message });
+  }
+});
+
+app.get("/api/get-organization-wallet/:id", async (req, res) => {
+  try {
+    console.log("🔍 Fetching wallet for organization ID:", req.params.id);
+
+    // Use `organizationModel` instead of `Organization`
+    const organization = await organizationModel.findById(req.params.id);
+
+    if (!organization) {
+      return res.status(404).json({ error: "Organization not found" });
+    }
+
+    console.log("✅ Organization Wallet:", organization.walletAddress);
+    res.json({ walletAddress: organization.walletAddress });
+  } catch (error) {
+    console.error("❌ Server Error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post('/api/jobs', async (req, res) => {
+  try {
+    const job = await Job.create(req.body);
+    res.status(201).json(job);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/jobs', async (req, res) => {
+  try {
+    const jobs = await Job.find().populate('organizationId', 'name photoUrl');
+    res.json(jobs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/jobs/:id', async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id).populate('organizationId', 'name photoUrl');
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    res.json(job);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/jobs/:jobId/has-applied/:userId', async (req, res) => {
+  try {
+    const exists = await Application.findOne({
+      jobId: req.params.jobId,
+      userId: req.params.userId,
+    });
+    res.json({ applied: !!exists });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/jobs/:jobId/applicants', async (req, res) => {
+  try {
+    const applications = await Application.find({ jobId: req.params.jobId })
+      .populate('userId', 'name email photoUrl');
+    res.json(applications);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Apply to job
+app.post('/api/jobs/:id/apply', async (req, res) => {
+  const { userId, resumeUrl, email, phone } = req.body;
+
+  try {
+    const existing = await Application.findOne({ jobId: req.params.id, userId });
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Already applied" });
+    }
+
+    const application = await Application.create({
+      jobId: req.params.id,
+      userId,
+      resumeUrl,
+      email,
+      phone,
+    });
+
+    res.status(201).json({ message: 'Application submitted', success: true, application });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Org's own jobs
+app.get('/api/my-jobs/:orgId', async (req, res) => {
+  try {
+    const jobs = await Job.find({ organizationId: req.params.orgId });
+    res.json(jobs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/api/get-organization-notifications/:organizationId", async (req, res) => {
+  try {
+    console.log("🔍 Fetching notifications for organization:", req.params.organizationId);
+
+    // Check if the organization exists before fetching notifications
+    const organization = await organizationModel.findById(req.params.organizationId);
+    if (!organization) {
+      console.error("❌ Organization not found:", req.params.organizationId);
+      return res.status(404).json({ message: "Organization not found" });
+    }
+
+    const notifications = await Notification.find({
+      organizationId: req.params.organizationId,
+      status: "pending",
+    })
+    .populate("userId", "name email")
+    .populate("certificateId", "certificateUrl contractId description");    
+
+    console.log("📩 Found notifications:", notifications);
+
+    // Check if notifications exist before sending response
+    if (!notifications.length) {
+      console.warn("⚠️ No notifications found for organization:", req.params.organizationId);
+      return res.status(200).json([]); // Return empty array
+    }
+
+    res.status(200).json(notifications);
+  } catch (error) {
+    console.error("❌ Server Error Fetching Notifications:", error);
+    res.status(500).json({ message: "Server error fetching notifications", error: error.message });
+  }
+});
+
+app.post("/api/respond-certificate", async (req, res) => {
+  const { notificationId, response, comment } = req.body;
+
+  try {
+    const notification = await Notification.findById(notificationId);
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+
+    // Update notification status
+    notification.status = response; // "accepted" or "declined"
+    if (comment) notification.responseComment = comment;
+    await notification.save();
+
+    // Update the certificate status
+    const certificate = await Certificate.findById(notification.certificateId);
+    if (!certificate) {
+      return res.status(404).json({ message: "Certificate not found" });
+    }
+
+    certificate.status = response; // ✅ Ensures certificate matches the notification status
+    await certificate.save();
+
+    res.status(200).json({ message: `Certificate ${response} successfully`, certificate });
+  } catch (error) {
+    console.error("Error responding to certificate:", error.message);
+    res.status(500).json({ message: "Error processing response", error: error.message });
+  }
+});
+
+app.get("/api/get-organizations", async (req, res) => {
+  const { type } = req.query;
+  console.log("🔍 Requested Organization Type:", type); // ✅ Debug
+
+  try {
+      if (!type) {
+          console.error("❌ Error: Organization type is missing");
+          return res.status(400).json({ message: "Organization type is required" });
+      }
+
+      const organizations = await organizationModel.find({ organizationType: type });
+
+      console.log("✅ Fetched Organizations:", organizations); // ✅ Debug
+
+      if (!organizations.length) {
+          console.warn("⚠️ Warning: No organizations found for type:", type);
+          return res.status(200).json([]); // Return an empty array instead of 404
+      }
+
+      res.status(200).json(organizations);
+  } catch (error) {
+      console.error("❌ Error fetching organizations:", error);
+      res.status(500).json({ message: "Error fetching organizations", error: error.message });
+  }
+});
+
+app.post("/api/respond-certificate", async (req, res) => {
+  const { notificationId, response, comment } = req.body;
+
+  try {
+    const notification = await Notification.findById(notificationId);
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+
+    // Update the notification status and response
+    notification.status = response; // "accepted" or "declined"
+    if (comment) notification.responseComment = comment;
+    await notification.save();
+
+    // Update certificate status based on response
+    const certificate = await Certificate.findById(notification.certificateId);
+    if (!certificate) {
+      return res.status(404).json({ message: "Certificate not found" });
+    }
+
+    if (response === "accepted") {
+      certificate.status = "verified";
+
+      // ✅ Add certificate to user's profile
+      await User.findByIdAndUpdate(
+        certificate.userId,
+        { $push: { certificates: certificate._id } },  // ✅ Store certificate in user profile
+        { new: true }
+      );
+    } else {
+      certificate.status = "declined";
+    }
+
+    await certificate.save();
+
+    res.status(200).json({ message: `Certificate ${response} successfully` });
+  } catch (error) {
+    console.error("Error responding to certificate:", error.message);
+    res.status(500).json({ message: "Error processing response", error: error.message });
+  }
+});
+
+// Endpoint: Fetch Verified Certificates
+app.get("/api/get-verified-certificates/:userId", async (req, res) => {
+  try {
+    const certificates = await Certificate.find({
+      userId: req.params.userId,
+      status: "verified",
+    }).populate("organizationId", "name");
+
+    res.status(200).json(certificates);
+  } catch (error) {
+    console.error("Error fetching certificates:", error.message);
+    res.status(500).json({ message: "Error fetching certificates", error: error.message });
+  }
+});
+
+// Endpoint: Store Payment Transaction Hash
+app.post("/api/pay-certificate-fee", async (req, res) => {
+  const { certificateId, transactionHash, contractId } = req.body;
+
+  try {
+    if (!certificateId || !transactionHash || contractId === undefined) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const updatedCertificate = await Certificate.findByIdAndUpdate(
+      certificateId,
+      { transactionHash, contractId, status: "pending" },
+      { new: true }
+    );    
+
+    if (!updatedCertificate) {
+      return res.status(404).json({ message: "Certificate not found" });
+    }
+
+    const newNotification = new Notification({
+      organizationId: updatedCertificate.organizationId,
+      userId: updatedCertificate.userId,
+      certificateId: updatedCertificate._id,
+      message: "New certificate uploaded by user for verification.",
+      status: "pending",
+    });
+
+    await newNotification.save();
+
+    res.status(200).json({
+      message: "✅ Payment recorded and certificate is now pending verification.",
+      certificate: updatedCertificate,
+    });
+  } catch (error) {
+    console.error("Error storing transaction hash:", error.message);
+    res.status(500).json({ message: "Error storing transaction hash", error: error.message });
+  }
+});
 
 // Routes
 // User and Organization Registration
 app.post("/api/register", upload.single("photo"), async (req, res) => {
-  const { name, email, password, role, organizationType } = req.body;
+  const { name, email, password, role, organizationType, walletAddress } = req.body;
 
   try {
-    if (!name || !email || !password || !role) {
+    if (!name || !email || !password || !role || !walletAddress) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -68,10 +397,10 @@ app.post("/api/register", upload.single("photo"), async (req, res) => {
         return res.status(400).json({ message: "Organization type is required" });
       }
 
-      const organizationData = { name, email, password: hashedPassword, photoUrl, organizationType };
+      const organizationData = { name, email, password: hashedPassword, photoUrl, organizationType, walletAddress };
       savedEntity = await new organizationModel(organizationData).save();
     } else {
-      const userData = { name, email, password: hashedPassword, photoUrl };
+      const userData = { name, email, password: hashedPassword, photoUrl, walletAddress };
       savedEntity = await new User(userData).save();
     }
 
@@ -82,12 +411,43 @@ app.post("/api/register", upload.single("photo"), async (req, res) => {
   }
 });
 
+app.post('/api/login-metamask', async (req, res) => {
+  const { walletAddress } = req.body;
+
+  try {
+    let account = await User.findOne({ walletAddress });
+    let role = "individual"; // Default role
+
+    if (!account) {
+      account = await organizationModel.findOne({ walletAddress });
+      role = "organization"; // Set role if found in organizations
+    }
+
+    if (!account) {
+      return res.status(404).json({ message: "Wallet not registered." });
+    }
+
+    // ✅ Ensure password is not sent
+    const { password, ...accountWithoutPassword } = account.toObject();
+
+    res.status(200).json({
+      message: "Login successful",
+      user: { ...accountWithoutPassword, role }, // ✅ Explicitly include `role`
+      role, 
+    });
+
+  } catch (error) {
+    console.error("Error logging in with MetaMask:", error);
+    res.status(500).json({ message: "Error logging in with MetaMask", error: error.message });
+  }
+});
+
 // User and Organization Login
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    let account = await User.findOne({ email }); 
+    let account = await User.findOne({ email });
     let role = 'individual';
 
     if (!account) {
@@ -105,7 +465,12 @@ app.post('/api/login', async (req, res) => {
     }
 
     const { password: _, ...accountWithoutPassword } = account._doc;
-    res.status(200).json({ message: 'Login successful', account: accountWithoutPassword, role });
+
+    res.status(200).json({
+      message: 'Login successful',
+      account: { ...accountWithoutPassword, role }, // ✅ Ensure role is included
+      role,
+    });
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ message: 'Error logging in', error: error.message });
@@ -113,56 +478,28 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Fetch User or Organization Profile
-app.put("/api/profile", upload.single("photo"), async (req, res) => {
-  const { email, name, workplace, degrees, certifications, walletAddress, establishedSince, numWorkers, accolades, role } = req.body;
-  try {
-    // ✅ Fix: Ensure we process images properly
-    let photoUrl = req.file ? await uploadToPinata(req.file.buffer, req.file.originalname) : req.body.photoUrl;
-
-    // ✅ Fix: Ensure the correct data model is used based on role
-    const updateData =
-      role === "organization"
-        ? { name, photoUrl, establishedSince, numWorkers, accolades }
-        : { name, photoUrl, workplace, degrees, certifications, walletAddress };
-
-    const model = role === "organization" ? organizationModel : User; // ✅ Fix reference
-
-    const updatedProfile = await model.findOneAndUpdate({ email }, updateData, { new: true });
-
-    if (!updatedProfile) {
-      return res.status(404).json({ message: `${role} not found` });
-    }
-
-    res.status(200).json({ message: "Profile updated successfully", updatedProfile });
-  } catch (error) {
-    console.error("Error updating profile:", error.message);
-    res.status(500).json({ message: "Error updating profile", error: error.message });
+app.get("/api/profile", async (req, res) => {
+  const { email } = req.query;
+  if (!email) {
+      return res.status(400).json({ message: "Email is required" });
   }
-});
-
-// Update User or Organization Profile
-app.put("/api/profile", upload.single("photo"), async (req, res) => {
-  const { email, name, workplace, degrees, certifications, walletAddress, establishedSince, numWorkers, accolades, role } = req.body;
   try {
-    let photoUrl = req.file ? await uploadToPinata(req.file.buffer, req.file.originalname) : req.body.photoUrl;
+      let profile = await User.findOne({ email });
+      let role = "individual";
 
-    const updateData =
-      role === "organization"
-        ? { name, photoUrl, establishedSince, numWorkers, accolades }
-        : { name, photoUrl, workplace, degrees, certifications, walletAddress };
+      if (!profile) {
+          profile = await organizationModel.findOne({ email });
+          role = "organization";
+      }
 
-    const model = role === "organization" ? organizationModel : userModel;
+      if (!profile) {
+          return res.status(404).json({ message: "Profile not found" });
+      }
 
-    const updatedProfile = await model.findOneAndUpdate({ email }, updateData, { new: true });
-
-    if (!updatedProfile) {
-      return res.status(404).json({ message: `${role} not found` });
-    }
-
-    res.status(200).json({ message: "Profile updated successfully", updatedProfile });
+      res.status(200).json({ profile, role });
   } catch (error) {
-    console.error("Error updating profile:", error.message);
-    res.status(500).json({ message: "Error updating profile", error: error.message });
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
