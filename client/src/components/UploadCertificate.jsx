@@ -179,37 +179,63 @@ const UploadCertificate = () => {
       const tx = await contract.uploadCertificate(
         organizationWallet,
         uploadedCertificate.certificateUrl,
-        { value: ethers.parseEther("0.01") }
+        { value: ethers.parseEther("0.001") }
       );
 
       const receipt = await tx.wait();
-      const event = receipt.logs.find(log => log.fragment?.name === "CertificateUploaded");
-      const contractCertificateId = Number(event?.args?.[0]);
+      console.log("🧾 Full Transaction Receipt:", receipt);
 
-      await tx.wait();
-      console.log("✅ Payment successful!", tx);
+      const iface = new ethers.Interface([
+        "event CertificateUploaded(uint256 id, address user, address organization, string ipfsHash, uint256 fee)"
+      ]);
 
-      // ✅ Store transaction hash in the backend
+      let contractCertificateId = null;
+
+      for (const log of receipt.logs) {
+        try {
+          const parsedLog = iface.parseLog(log);
+          if (parsedLog.name === "CertificateUploaded") {
+            console.log("📦 Parsed CertificateUploaded Event:", parsedLog.args);
+            contractCertificateId = Number(parsedLog.args.id); // or parsedLog.args[0]
+            break;
+          }
+        } catch (err) {
+          // Skip logs that don't match
+        }
+      }
+
+      if (contractCertificateId === null) {
+        throw new Error("❌ Could not extract contractId from transaction receipt!");
+      }
+
+      console.log("✅ Extracted contract ID:", contractCertificateId);
+
+      // ✅ Store transaction hash + contractId in backend
       await fetch("http://localhost:5000/api/pay-certificate-fee", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           certificateId: uploadedCertificate._id,
           transactionHash: tx.hash,
-          contractId: contractCertificateId, // ✅ Add this
+          contractId: contractCertificateId,
         }),
-      });      
+      });
 
-      setUploadedCertificate((prev) => ({ ...prev, transactionHash: tx.hash }));
-      setMessage("Payment successful! Your certificate is awaiting verification.");
+      setUploadedCertificate((prev) => ({
+        ...prev,
+        transactionHash: tx.hash,
+        contractId: contractCertificateId,
+      }));
+
+      setMessage("✅ Payment successful! Your certificate is awaiting verification.");
     } catch (error) {
       console.error("❌ Payment error:", error);
       setMessage("Error processing payment.");
     } finally {
-      setPaying(false); // Enable button after process ends
+      setPaying(false);
     }
-  };         
-
+  }
+      
   return (
     <div className="container mx-auto p-6">
       <h2 className="text-2xl font-bold mb-4">Upload Certificate</h2>

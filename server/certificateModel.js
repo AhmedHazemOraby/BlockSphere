@@ -11,7 +11,7 @@ const certificateSchema = new mongoose.Schema({
     default: "unpaid",
   },
   transactionHash: { type: String, default: "" },
-  contractId: { type: Number }, // ✅ Add this
+  contractId: { type: Number, required: false }, 
 }, { timestamps: true });
 
 const Certificate = mongoose.model("Certificate", certificateSchema);

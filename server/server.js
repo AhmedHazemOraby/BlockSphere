@@ -10,7 +10,8 @@ const User = require("./userModel");
 const Notification = require("./notificationModel");
 const Job = require('./jobModel');
 const Application = require('./applicationModel');
-
+const FriendRequest = require("./FriendRequest");
+const Message = require("./Message");
 
 // Import postRoutes
 const postRoutes = require('./postRoutes');
@@ -89,6 +90,87 @@ app.post("/api/upload-certificate", upload.single("certificate"), async (req, re
   }
 });
 
+// Send friend request
+app.post("/api/friend-request", async (req, res) => {
+  const { senderId, receiverId } = req.body;
+
+  const sender = await User.findById(senderId);
+  const receiver = await User.findById(receiverId);
+
+  if (!sender || !receiver) {
+    return res.status(404).json({ message: "User(s) not found" });
+  }
+
+  // 👇 Prevent organizations from sending/receiving
+  if (sender.role === "organization" || receiver.role === "organization") {
+    return res.status(403).json({ message: "Organizations can't send or receive requests" });
+  }
+
+  const existing = await FriendRequest.findOne({ sender: senderId, receiver: receiverId });
+  if (existing) return res.status(400).json({ message: "Request already sent" });
+
+  const request = await FriendRequest.create({ sender: senderId, receiver: receiverId });
+  res.status(201).json(request);
+});
+
+// Accept or decline request
+app.post("/api/friend-request/respond", async (req, res) => {
+  const { requestId, status } = req.body;
+
+  try {
+    console.log("🟡 Friend request ID:", requestId, "Status:", status);
+
+    const request = await FriendRequest.findByIdAndUpdate(
+      requestId,
+      { status },
+      { new: true }
+    );
+
+    if (!request) {
+      console.error("❌ Friend request not found");
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    console.log("✅ Friend request:", request);
+
+    if (status === "accepted") {
+      // 🧠 Defensive: make sure request.sender and request.receiver are valid
+      if (!request.sender || !request.receiver) {
+        return res.status(400).json({ message: "Missing sender or receiver in request" });
+      }
+
+      await User.findByIdAndUpdate(request.sender, {
+        $addToSet: { connections: request.receiver },
+      });
+
+      await User.findByIdAndUpdate(request.receiver, {
+        $addToSet: { connections: request.sender },
+      });
+    }
+
+    res.status(200).json(request);
+  } catch (error) {
+    console.error("🔥 Error responding to request:", error.message);
+    res.status(500).json({ message: "Error responding to request", error: error.message });
+  }
+});
+
+// Get all users and their friend request status
+app.get("/api/network-users/:userId", async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const users = await User.find({ _id: { $ne: userId } }).select("name email photoUrl");
+    const requests = await FriendRequest.find({
+      $or: [{ sender: userId }, { receiver: userId }]
+    });
+
+    res.json({ users, requests });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch users", error: error.message });
+  }
+});
+
 app.get("/api/get-organization-wallet/:id", async (req, res) => {
   try {
     console.log("🔍 Fetching wallet for organization ID:", req.params.id);
@@ -105,6 +187,20 @@ app.get("/api/get-organization-wallet/:id", async (req, res) => {
   } catch (error) {
     console.error("❌ Server Error:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ✅ Get all certificates for a user (not just verified)
+app.get("/api/get-user-certificates/:userId", async (req, res) => {
+  try {
+    const certificates = await Certificate.find({
+      userId: req.params.userId,
+    }).populate("organizationId", "name");
+
+    res.status(200).json(certificates);
+  } catch (error) {
+    console.error("Error fetching certificates:", error.message);
+    res.status(500).json({ message: "Error fetching certificates", error: error.message });
   }
 });
 
@@ -208,7 +304,7 @@ app.get("/api/get-organization-notifications/:organizationId", async (req, res) 
       status: "pending",
     })
     .populate("userId", "name email")
-    .populate("certificateId", "certificateUrl contractId description");    
+    .populate("certificateId") // populate all fields    
 
     console.log("📩 Found notifications:", notifications);
 
@@ -234,21 +330,33 @@ app.post("/api/respond-certificate", async (req, res) => {
       return res.status(404).json({ message: "Notification not found" });
     }
 
-    // Update notification status
+    // Update the notification status and response
     notification.status = response; // "accepted" or "declined"
     if (comment) notification.responseComment = comment;
     await notification.save();
 
-    // Update the certificate status
+    // ✅ Update certificate status
     const certificate = await Certificate.findById(notification.certificateId);
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
     }
 
-    certificate.status = response; // ✅ Ensures certificate matches the notification status
+    if (response === "accepted") {
+      certificate.status = "verified";
+
+      // ✅ Add to user's profile
+      await User.findByIdAndUpdate(
+        certificate.userId,
+        { $push: { certificates: certificate._id } },
+        { new: true }
+      );
+    } else {
+      certificate.status = "declined";
+    }
+
     await certificate.save();
 
-    res.status(200).json({ message: `Certificate ${response} successfully`, certificate });
+    res.status(200).json({ message: `Certificate ${response} successfully` });
   } catch (error) {
     console.error("Error responding to certificate:", error.message);
     res.status(500).json({ message: "Error processing response", error: error.message });
@@ -281,48 +389,6 @@ app.get("/api/get-organizations", async (req, res) => {
   }
 });
 
-app.post("/api/respond-certificate", async (req, res) => {
-  const { notificationId, response, comment } = req.body;
-
-  try {
-    const notification = await Notification.findById(notificationId);
-    if (!notification) {
-      return res.status(404).json({ message: "Notification not found" });
-    }
-
-    // Update the notification status and response
-    notification.status = response; // "accepted" or "declined"
-    if (comment) notification.responseComment = comment;
-    await notification.save();
-
-    // Update certificate status based on response
-    const certificate = await Certificate.findById(notification.certificateId);
-    if (!certificate) {
-      return res.status(404).json({ message: "Certificate not found" });
-    }
-
-    if (response === "accepted") {
-      certificate.status = "verified";
-
-      // ✅ Add certificate to user's profile
-      await User.findByIdAndUpdate(
-        certificate.userId,
-        { $push: { certificates: certificate._id } },  // ✅ Store certificate in user profile
-        { new: true }
-      );
-    } else {
-      certificate.status = "declined";
-    }
-
-    await certificate.save();
-
-    res.status(200).json({ message: `Certificate ${response} successfully` });
-  } catch (error) {
-    console.error("Error responding to certificate:", error.message);
-    res.status(500).json({ message: "Error processing response", error: error.message });
-  }
-});
-
 // Endpoint: Fetch Verified Certificates
 app.get("/api/get-verified-certificates/:userId", async (req, res) => {
   try {
@@ -333,7 +399,6 @@ app.get("/api/get-verified-certificates/:userId", async (req, res) => {
 
     res.status(200).json(certificates);
   } catch (error) {
-    console.error("Error fetching certificates:", error.message);
     res.status(500).json({ message: "Error fetching certificates", error: error.message });
   }
 });
@@ -343,6 +408,8 @@ app.post("/api/pay-certificate-fee", async (req, res) => {
   const { certificateId, transactionHash, contractId } = req.body;
 
   try {
+    console.log("📥 Incoming payment payload:", req.body);
+
     if (!certificateId || !transactionHash || contractId === undefined) {
       return res.status(400).json({ message: "Missing required fields" });
     }
@@ -351,7 +418,9 @@ app.post("/api/pay-certificate-fee", async (req, res) => {
       certificateId,
       { transactionHash, contractId, status: "pending" },
       { new: true }
-    );    
+    );
+
+    console.log("📄 Certificate after payment:", updatedCertificate);
 
     if (!updatedCertificate) {
       return res.status(404).json({ message: "Certificate not found" });
@@ -427,12 +496,11 @@ app.post('/api/login-metamask', async (req, res) => {
       return res.status(404).json({ message: "Wallet not registered." });
     }
 
-    // ✅ Ensure password is not sent
     const { password, ...accountWithoutPassword } = account.toObject();
 
     res.status(200).json({
       message: "Login successful",
-      user: { ...accountWithoutPassword, role }, // ✅ Explicitly include `role`
+      user: { ...accountWithoutPassword, role }, 
       role, 
     });
 
@@ -468,7 +536,7 @@ app.post('/api/login', async (req, res) => {
 
     res.status(200).json({
       message: 'Login successful',
-      account: { ...accountWithoutPassword, role }, // ✅ Ensure role is included
+      account: { ...accountWithoutPassword, role }, 
       role,
     });
   } catch (error) {
@@ -484,7 +552,7 @@ app.get("/api/profile", async (req, res) => {
       return res.status(400).json({ message: "Email is required" });
   }
   try {
-      let profile = await User.findOne({ email });
+      let profile = await User.findOne({ email }).populate("connections", "name email");
       let role = "individual";
 
       if (!profile) {
@@ -500,6 +568,23 @@ app.get("/api/profile", async (req, res) => {
   } catch (error) {
       console.error("Error fetching profile:", error);
       res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+// Fetch all users except the current one
+app.get("/api/users", async (req, res) => {
+  const currentUserId = req.query.currentUserId;
+
+  if (!currentUserId) {
+    return res.status(400).json({ message: "currentUserId query param is required" });
+  }
+
+  try {
+    const users = await User.find({ _id: { $ne: currentUserId } }).select("name email photoUrl");
+    res.status(200).json(users);
+  } catch (err) {
+    console.error("Error fetching users:", err.message);
+    res.status(500).json({ message: "Failed to fetch users" });
   }
 });
 
@@ -520,9 +605,36 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 // Use postRoutes for handling posts
 app.use("/api/posts", postRoutes);
 
-// Handle 404 Errors
 app.use((req, res) => res.status(404).json({ message: "Endpoint not found" }));
 
 // Start Server
+const http = require("http").createServer(app);
+const { Server } = require("socket.io");
+
+const io = new Server(http, {
+  cors: {
+    origin: "*", // Use your frontend domain in production
+    methods: ["GET", "POST"],
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("🟢 Socket connected:", socket.id);
+
+  socket.on("join", (email) => {
+    socket.join(email);
+    console.log(`👤 ${email} joined their room`);
+  });
+
+  socket.on("sendMessage", (message) => {
+    const { receiver } = message;
+    io.to(receiver).emit("receiveMessage", message);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("🔌 Disconnected:", socket.id);
+  });
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+http.listen(PORT, () => console.log(`🚀 Server with Socket.IO running on port ${PORT}`));

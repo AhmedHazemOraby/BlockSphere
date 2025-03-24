@@ -54,7 +54,7 @@ contract CertificateManager {
             require(address(this).balance >= cert.fee, "Not enough ETH in contract");
 
             payable(cert.organization).transfer(cert.fee); // ✅ Transfer ETH to organization
-            emit PaymentTransferred(_id, cert.organization, cert.fee); // ✅ Debugging event
+            emit PaymentTransferred(_id, cert.organization, cert.fee);
 
             cert.verified = true;
         } else {
@@ -62,7 +62,7 @@ contract CertificateManager {
             require(address(this).balance >= cert.fee, "Not enough ETH in contract");
 
             payable(cert.user).transfer(cert.fee); // ✅ Refund ETH to user
-            emit RefundIssued(_id, cert.user, cert.fee); // ✅ Debugging event
+            emit RefundIssued(_id, cert.user, cert.fee);
 
             cert.rejected = true;
         }
@@ -71,12 +71,12 @@ contract CertificateManager {
         emit CertificateVerified(_id, _accepted, _comment);
     }
 
-    // ✅ Debugging function: Check contract balance
+    // Check contract balance
     function getContractBalance() public view returns (uint256) {
         return address(this).balance;
     }
 
-    // ✅ New Function: Get Certificate Details
+    // Get Certificate Details
     function getCertificate(uint256 _id) public view returns (
         uint256 id,
         address user,

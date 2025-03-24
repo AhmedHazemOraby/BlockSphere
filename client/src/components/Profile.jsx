@@ -45,14 +45,15 @@ const Profile = () => {
   // ✅ Function to fetch verified certificates
   const fetchVerifiedCertificates = async (userId) => {
     try {
-      const response = await fetch(`/api/get-verified-certificates/${userId}`);
+      const response = await fetch(`http://localhost:5000/api/get-user-certificates/${userId}`);  
       if (!response.ok) throw new Error("Failed to fetch certificates");
       const data = await response.json();
-      setCertificates(data);
+      console.log("📦 Certificates fetched from API:", data);
+      setCertificates(data.filter(cert => cert.status === "verified"));
     } catch (error) {
       console.error("Error fetching certificates:", error);
     }
-  };
+  };  
 
   const sanitizedPhotoUrl = user?.photoUrl
     ? user.photoUrl.replace('http://localhost:8080', 'https://gateway.pinata.cloud/ipfs')
@@ -157,7 +158,27 @@ const Profile = () => {
               <>
                 <p className="text-gray-500">Workplace: {user.workplace || 'N/A'}</p>
                 <p className="text-gray-500">Degrees: {user.degrees || 'N/A'}</p>
-                <p className="text-gray-500">Certifications: {user.certifications || 'N/A'}</p>
+                <h3 className="text-lg font-bold mt-4">Certificates</h3>
+                <ul>
+                  {certificates.length > 0 ? (
+                    certificates.map((cert) => (
+                      <li key={cert._id} className="mt-2 border p-2 rounded shadow-sm bg-white">
+                        <img src={cert.certificateUrl} alt="Certificate" className="w-full max-w-xs rounded-md" />
+                        <p className="text-gray-600">{cert.description}</p>
+                        <p className="text-sm text-gray-500">
+                          Issued by: <span className="font-semibold">{cert.organizationId?.name || 'Unknown'}</span>
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Status: <span className={`font-semibold ${cert.status === "verified" ? "text-green-600" : "text-yellow-600"}`}>
+                            {cert.status}
+                          </span>
+                        </p>
+                      </li>
+                    ))
+                  ) : (
+                    <p className="text-gray-500">No certificates yet.</p>
+                  )}
+                </ul>
               </>
             )}
           </div>
@@ -247,7 +268,7 @@ const Profile = () => {
               </div>
 
               {/* Verified Certificates Section */}
-              <h3 className="text-lg font-bold mt-4">Verified Certificates</h3>
+              <h3 className="text-lg font-bold mt-4">Certificates</h3>
               <ul>
                 {certificates.length > 0 ? (
                   certificates.map((cert) => (
@@ -255,7 +276,13 @@ const Profile = () => {
                       <img src={cert.certificateUrl} alt="Certificate" className="w-full max-w-xs rounded-md" />
                       <p className="text-gray-600">{cert.description}</p>
                       <p className="text-sm text-gray-500">
-                        Verified by: <span className="font-semibold">{cert.organizationId.name}</span>
+                      Verified by: <span className="font-semibold">{cert.organizationId?.name || "Unknown Organization"}</span>
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Status:{" "}
+                        <span className={`font-semibold ${cert.status === "verified" ? "text-green-600" : "text-yellow-600"}`}>
+                          {cert.status}
+                        </span>
                       </p>
                     </li>
                   ))

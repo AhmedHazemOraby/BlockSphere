@@ -74,7 +74,6 @@ export const UserProvider = ({ children }) => {
     return response.json();
   };  
   
-  // Function to update user or organization profile
   const updateUserProfile = async (data) => {
     try {
       const formData = new FormData();
@@ -122,7 +121,6 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // Function to log in user or organization (Email & Password)
   const loginUser = async (email, password) => {
     try {
       const response = await fetch('http://localhost:5000/api/login', {
@@ -149,7 +147,6 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // ✅ New Function: Log in using MetaMask Wallet
   const loginWithWallet = async (walletAddress) => {
     try {
         const response = await fetch("http://localhost:5000/api/login-metamask", {
@@ -164,7 +161,6 @@ export const UserProvider = ({ children }) => {
             throw new Error(loginData.message || "Wallet login failed");
         }
 
-        // ✅ Ensure response contains user and role
         if (!loginData.user || !loginData.role) {
             throw new Error("Invalid response from server: Missing user or role");
         }
@@ -173,7 +169,7 @@ export const UserProvider = ({ children }) => {
 
         setUser(loginData.user);
         setUserProfile(loginData.user);
-        setRole(loginData.role); // ✅ Fix: Set the correct role
+        setRole(loginData.role);
         setError(null);
     } catch (error) {
         console.error("Error logging in with wallet:", error.message);
@@ -216,6 +212,7 @@ export const UserProvider = ({ children }) => {
         <UserContext.Provider
       value={{
         user,
+        setUser,
         userProfile,
         role,
         notifications,
