@@ -143,7 +143,7 @@ const UploadCertificate = () => {
       setPaying(true); // Disable button
       await window.ethereum.request({ method: "eth_requestAccounts" });
 
-      const contractAddress = "0xAbf4f0FA104e6dF73bDC6f2177503dC56B5aB071";
+      const contractAddress = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707"; //"0xAbf4f0FA104e6dF73bDC6f2177503dC56B5aB071"; 
       const abi = [
         {
           "inputs": [
@@ -165,7 +165,7 @@ const UploadCertificate = () => {
         }
       ];
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
+      const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(contractAddress, abi, signer);
 
@@ -173,7 +173,7 @@ const UploadCertificate = () => {
         contractAddress,
         organizationWallet,
         certificateUrl: uploadedCertificate.certificateUrl,
-        amount: "0.01 ETH",
+        amount: "0.001 ETH",
       });
 
       const tx = await contract.uploadCertificate(
@@ -312,7 +312,7 @@ const UploadCertificate = () => {
             }`}
             disabled={paying} // Disable button while paying
           >
-            {paying ? "Processing Payment..." : "Pay Fee (0.01 ETH)"}
+            {paying ? "Processing Payment..." : "Pay Fee (0.001 ETH)"}
           </button>
         </div>
       )
