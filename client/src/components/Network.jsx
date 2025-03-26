@@ -110,33 +110,31 @@ const Network = () => {
   };
 
   const handleFriendResponse = async (requestId, status) => {
-    if (user.role !== "individual") return;
+    if (user.role !== "individual") return; // Ensure only individuals can handle friend requests
+  
     try {
       const res = await fetch("http://localhost:5000/api/friend-request/respond", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId, status }),
-      });  
+      });
   
       const updated = await res.json();
   
       if (res.ok) {
-        setRequests(prev =>
-          prev.map(r => (r._id === requestId ? updated : r))
-        );
+        setRequests((prev) => prev.filter((r) => r._id !== requestId)); // Remove processed request
   
         if (status === "accepted") {
-          const otherUserId =
-            updated.sender === user._id ? updated.receiver : updated.sender;
+          const otherUserId = updated.sender === user._id ? updated.receiver : updated.sender;
   
-          setUser(prevUser => ({
+          // **Update user state immediately**
+          setUser((prevUser) => ({
             ...prevUser,
-            connections: [...(prevUser?.connections || []), otherUserId], // ✅ FIXED
+            connections: [...(prevUser?.connections || []), otherUserId],
           }));
   
-          const refreshed = await fetch(`http://localhost:5000/api/profile?email=${user.email}`);
-          const freshData = await refreshed.json();
-          setUser(freshData.profile);
+          // **Update allUsers to reflect the change**
+          setAllUsers((prevUsers) => prevUsers.filter((u) => u._id !== otherUserId));
   
           setMessage("✅ Connection accepted.");
         }
@@ -144,7 +142,7 @@ const Network = () => {
     } catch (err) {
       console.error("Failed to respond to friend request:", err.message);
     }
-  };  
+  };      
 
   const getFriendRequestStatus = (otherUserId) => {
     const request = requests.find(
@@ -166,8 +164,7 @@ const Network = () => {
     return { status: null, requestId: null, direction: null };
   };   
 
-  const isConnected = (userId) =>
-    user?.connections?.some((connId) => connId.toString() === userId.toString());  
+  const isConnected = (userId) => user?.connections?.includes(userId);  
 
   if (!user || !user._id) {
     return (
@@ -213,10 +210,9 @@ const Network = () => {
           <h2 className="text-2xl font-semibold mb-4">Users</h2>
           {allUsers.length ? (
             allUsers
-              .filter((u) => !user.connections.includes(u._id)) // ✅ Hide connections
+              .filter((u) => !user.connections.includes(u._id)) // Hide connections from the user list
               .map((u) => {
-                const { status, requestId, direction } = getFriendRequestStatus(u._id);
-                const connected = isConnected(u._id);
+                const { status, requestId } = getFriendRequestStatus(u._id);
 
                 return (
                   <div
@@ -229,11 +225,7 @@ const Network = () => {
                       </p>
                     </div>
                     <div>
-                      {connected ? (
-                        <button className="bg-blue-500 text-white px-3 py-1 rounded">
-                          Chat
-                        </button>
-                      ) : status === "pending" ? (
+                      {status === "pending" ? (
                         <button
                           disabled
                           className="bg-yellow-400 text-white px-3 py-1 rounded"
@@ -243,17 +235,13 @@ const Network = () => {
                       ) : status === "respond" ? (
                         <>
                           <button
-                            onClick={() =>
-                              handleFriendResponse(requestId, "accepted")
-                            }
+                            onClick={() => handleFriendResponse(requestId, "accepted")}
                             className="bg-green-500 text-white px-3 py-1 rounded mr-2"
                           >
                             Accept
                           </button>
                           <button
-                            onClick={() =>
-                              handleFriendResponse(requestId, "declined")
-                            }
+                            onClick={() => handleFriendResponse(requestId, "declined")}
                             className="bg-red-500 text-white px-3 py-1 rounded"
                           >
                             Decline
