@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import logo from '../../images/logo.png';
 import defaultUserImage from '../../images/defaultUserImage.png';
 import { useUser } from '../context/UserContext';
+import { MdNotificationsNone } from "react-icons/md";
 
 const NavBarItem = ({ title, link, classprops }) => (
   <li className={`mx-4 cursor-pointer text-black hover:text-yellow-500 ${classprops}`}>
@@ -13,7 +14,7 @@ const NavBarItem = ({ title, link, classprops }) => (
 );
 
 const Navbar = () => {
-  const { user, logoutUser, loading } = useUser();
+  const { user, logoutUser, loading, unreadMessages } = useUser();
   const [toggleMenu, setToggleMenu] = React.useState(false);
   const navigate = useNavigate();
 
@@ -38,11 +39,22 @@ const Navbar = () => {
         <NavBarItem title="Jobs" link="/jobs" />
         <NavBarItem title="Profile" link="/profile" />
         {user ? (
+  <div className="flex items-center gap-4">
+    {/* Notification bell */}
+    <div className="relative cursor-pointer">
+      <MdNotificationsNone size={24} />
+      {unreadMessages.length > 0 && (
+        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
+          {unreadMessages.length}
+        </span>
+      )}
+    </div>
+          {/* Profile image and logout dropdown */}
           <div className="relative group">
             <img
               src={sanitizedPhotoUrl || defaultUserImage}
               alt="Profile"
-              onError={(e) => (e.target.src = defaultUserImage)} // Fallback for failed images
+              onError={(e) => (e.target.src = defaultUserImage)}
               className="w-10 h-10 rounded-full cursor-pointer object-cover"
             />
             <ul className="hidden group-hover:block absolute bg-white shadow-md mt-2 py-2 rounded-md">
@@ -54,6 +66,7 @@ const Navbar = () => {
               </li>
             </ul>
           </div>
+        </div>
         ) : (
           <Link
             to="/login"

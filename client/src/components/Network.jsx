@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useUser } from "../context/UserContext";
 import { ethers } from "ethers";
+import { useNavigate } from 'react-router-dom';  // <-- Move the import here
 
 const contractAddress = "0xAbf4f0FA104e6dF73bDC6f2177503dC56B5aB071";
 
@@ -25,6 +26,17 @@ const Network = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+
+  const navigate = useNavigate();  // <-- Move this inside the component
+
+  // Early return: Check if the user data is not available
+  if (!user || !user._id) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <h1 className="text-2xl font-medium">Loading your network...</h1>
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (!user) return;
@@ -110,39 +122,36 @@ const Network = () => {
   };
 
   const handleFriendResponse = async (requestId, status) => {
-    if (user.role !== "individual") return; // Ensure only individuals can handle friend requests
-  
+    if (user.role !== "individual") return;
+
     try {
       const res = await fetch("http://localhost:5000/api/friend-request/respond", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId, status }),
       });
-  
+
       const updated = await res.json();
-  
+
       if (res.ok) {
         setRequests((prev) => prev.filter((r) => r._id !== requestId)); // Remove processed request
-  
+
         if (status === "accepted") {
           const otherUserId = updated.sender === user._id ? updated.receiver : updated.sender;
-  
-          // **Update user state immediately**
+
           setUser((prevUser) => ({
             ...prevUser,
             connections: [...(prevUser?.connections || []), otherUserId],
           }));
-  
-          // **Update allUsers to reflect the change**
+
           setAllUsers((prevUsers) => prevUsers.filter((u) => u._id !== otherUserId));
-  
           setMessage("✅ Connection accepted.");
         }
       }
     } catch (err) {
       console.error("Failed to respond to friend request:", err.message);
     }
-  };      
+  };
 
   const getFriendRequestStatus = (otherUserId) => {
     const request = requests.find(
@@ -162,29 +171,27 @@ const Network = () => {
     }
   
     return { status: null, requestId: null, direction: null };
-  };   
+  };
 
   const isConnected = (userId) => user?.connections?.includes(userId);  
 
-  if (!user || !user._id) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <h1 className="text-2xl font-medium">Loading your network...</h1>
       </div>
     );
-  }   
+  }    
 
   return (
     <div className="flex flex-col items-center min-h-screen p-6 bg-gray-100">
       <h1 className="text-3xl font-bold mb-6">My Network</h1>
 
-      {/* Certificate Notifications for Organizations */}
-      {user.role === "organization" && (
+       {/* Certificate Notifications for Organizations */}
+       {user.role === "organization" && (
         <div className="w-full max-w-3xl">
           <h2 className="text-2xl font-semibold mb-4">Pending Certificates</h2>
-          {loading ? (
-            <p>Loading notifications...</p>
-          ) : notifications.length ? (
+          {notifications.length ? (
             notifications.map((notification) => (
               <div key={notification._id} className="bg-white p-4 mb-4 shadow rounded">
                 <p><strong>User:</strong> {notification.userId?.name} ({notification.userId?.email})</p>
@@ -213,7 +220,6 @@ const Network = () => {
               .filter((u) => !user.connections.includes(u._id)) // Hide connections from the user list
               .map((u) => {
                 const { status, requestId } = getFriendRequestStatus(u._id);
-
                 return (
                   <div
                     key={u._id}
@@ -248,12 +254,17 @@ const Network = () => {
                           </button>
                         </>
                       ) : (
-                        <button
-                          onClick={() => handleConnect(u._id)}
-                          className="bg-indigo-500 text-white px-3 py-1 rounded"
-                        >
-                          Connect
-                        </button>
+                        // Use isConnected to check if the user is already connected
+                        !isConnected(u._id) ? (
+                          <button
+                            onClick={() => handleConnect(u._id)}
+                            className="bg-indigo-500 text-white px-3 py-1 rounded"
+                          >
+                            Connect
+                          </button>
+                        ) : (
+                          <span className="text-green-500">Connected</span> // You can customize this text or button.
+                        )
                       )}
                     </div>
                   </div>
@@ -279,9 +290,8 @@ const Network = () => {
                   <p className="text-lg">
                     {u.name} ({u.email})
                   </p>
-                  <button className="bg-blue-500 text-white px-3 py-1 rounded">
-                    Chat
-                  </button>
+                  <button onClick={() => navigate(`/chat/${u._id}`)} // Navigate to the chat room of the user
+                  className="bg-blue-500 text-white px-3 py-1 rounded">Chat</button>
                 </div>
               ))
           ) : (

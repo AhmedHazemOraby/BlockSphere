@@ -546,28 +546,35 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Fetch User or Organization Profile
+// server.js
+
 app.get("/api/profile", async (req, res) => {
-  const { email } = req.query;
+  const { email } = req.query;  // Ensure the email query parameter is received
+  console.log("Received email:", email);  // Add this to debug and ensure email is being passed
+
   if (!email) {
-      return res.status(400).json({ message: "Email is required" });
+    return res.status(400).json({ message: "Email is required" });
   }
+
   try {
-      let profile = await User.findOne({ email }).populate("connections", "name email");
-      let role = "individual";
+    // Look for the user by email
+    let profile = await User.findOne({ email }).populate("connections", "name email");
+    let role = "individual";
 
-      if (!profile) {
-          profile = await organizationModel.findOne({ email });
-          role = "organization";
-      }
+    if (!profile) {
+      // Check if the profile belongs to an organization
+      profile = await organizationModel.findOne({ email });
+      role = "organization";  // Set the role to "organization" if it's an org profile
+    }
 
-      if (!profile) {
-          return res.status(404).json({ message: "Profile not found" });
-      }
+    if (!profile) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
 
-      res.status(200).json({ profile, role });
+    res.status(200).json({ profile, role });
   } catch (error) {
-      console.error("Error fetching profile:", error);
-      res.status(500).json({ message: "Server error", error: error.message });
+    console.error("Error fetching profile:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
@@ -585,6 +592,107 @@ app.get("/api/users", async (req, res) => {
   } catch (err) {
     console.error("Error fetching users:", err.message);
     res.status(500).json({ message: "Failed to fetch users" });
+  }
+});
+
+// Save messages
+app.post("/api/messages", async (req, res) => {
+  try {
+    const { sender, receiver, content, type } = req.body;
+
+    if (!sender || !receiver || !content) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const message = new Message({ sender, receiver, content, type });
+    await message.save();
+    res.status(201).json(message);
+  } catch (error) {
+    console.error("Error saving message:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+app.put("/api/mark-messages-seen", async (req, res) => {
+  const { sender, receiver } = req.body;
+
+  try {
+    await Message.updateMany(
+      { sender, receiver, seen: false },
+      { $set: { seen: true } }
+    );
+
+    res.status(200).json({ message: "Messages marked as seen" });
+  } catch (err) {
+    console.error("Error marking messages seen:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// server.js
+app.post("/api/messages/mark-seen", async (req, res) => {
+  const { userEmail, otherEmail } = req.body;
+  try {
+    await Message.updateMany(
+      { sender: otherEmail, receiver: userEmail, seen: false },
+      { seen: true }
+    );
+    res.status(200).json({ message: "Messages marked as seen" });
+  } catch (err) {
+    console.error("Mark seen error:", err.message);
+    res.status(500).json({ error: "Failed to update seen status" });
+  }
+});
+
+app.get("/api/messages/:sender/:receiver", async (req, res) => {
+  const { sender, receiver } = req.params;
+
+  try {
+    const messages = await Message.find({
+      $or: [
+        { sender, receiver },
+        { sender: receiver, receiver: sender },
+      ],
+    }).sort({ createdAt: 1 });
+
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch messages", error: err.message });
+  }
+});
+
+// Get unread messages grouped by sender
+app.get("/api/unread-messages/:userEmail", async (req, res) => {
+  try {
+    const { userEmail } = req.params;
+
+    const unread = await Message.aggregate([
+      { $match: { receiver: userEmail, seen: false } },
+      {
+        $group: {
+          _id: "$sender",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    res.status(200).json(unread);
+  } catch (err) {
+    console.error("Error fetching unread messages:", err);
+    res.status(500).json({ message: "Failed to fetch unread messages" });
+  }
+});
+
+app.get("/api/users/:id", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("name email photoUrl");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error fetching user by ID:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
@@ -621,16 +729,21 @@ const io = new Server(http, {
 io.on("connection", (socket) => {
   console.log("🟢 Socket connected:", socket.id);
 
+  // Join the user's room based on their email
   socket.on("join", (email) => {
-    socket.join(email);
-    console.log(`👤 ${email} joined their room`);
+    socket.join(email);  // Join a room with the user's email
+    console.log(`${email} joined their room`);
   });
 
+  // Listen for incoming messages and send them to the receiver's room
   socket.on("sendMessage", (message) => {
-    const { receiver } = message;
-    io.to(receiver).emit("receiveMessage", message);
-  });
+    const { receiver, sender } = message;
+    io.to(receiver).emit("receiveMessage", message); // Receiver
+    io.to(sender).emit("receiveMessage", message);   // Sender (to reflect immediately)
+    io.to(receiver).emit("newNotification");
+  });  
 
+  // Handle disconnection
   socket.on("disconnect", () => {
     console.log("🔌 Disconnected:", socket.id);
   });

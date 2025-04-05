@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { io } from "socket.io-client";
+const socket = io("http://localhost:5000");
 
 const UserContext = createContext();
 
@@ -11,6 +13,31 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [unreadMessages, setUnreadMessages] = useState([]);
+
+  const fetchUnreadMessages = async () => {
+    if (user?.email) {
+      try {
+        const res = await fetch(`http://localhost:5000/api/unread-messages/${user.email}`);
+        const data = await res.json();
+        setUnreadMessages(data);
+      } catch (err) {
+        console.error("Failed to refresh unread messages:", err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (user?.email) {
+      socket.emit("join", user.email);
+  
+      socket.on("newNotification", fetchUnreadMessages);
+    }
+  
+    return () => {
+      socket.off("newNotification");
+    };
+  }, [user?.email]);
 
   useEffect(() => {
     if (user && role === "organization") {
@@ -23,6 +50,15 @@ export const UserProvider = ({ children }) => {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (user?.email) {
+      fetch(`http://localhost:5000/api/unread-messages/${user.email}`)
+        .then((res) => res.json())
+        .then((data) => setUnreadMessages(data))
+        .catch((err) => console.error("Failed to fetch unread messages:", err));
+    }
+  }, [user]);
+
   // Function to register user or organization
   const registerUser = async (data) => {
     try {
@@ -31,7 +67,6 @@ export const UserProvider = ({ children }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-
       if (response.ok) {
         const userData = await response.json();
         const account = userData.user || userData.organization;
@@ -178,27 +213,54 @@ export const UserProvider = ({ children }) => {
     }
 };
 
-  // Fetch user or organization profile
+  // Example of how to correctly fetch the profile data using the email from the user context:
+
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    if (user) {
+      fetchUserProfile(); // Fetch profile after the user is set
+    } else {
+      setLoading(false); // If no user, stop loading
+    }
+  }, [user]); // Depend on user only  
+  
+  const fetchUserProfile = async () => {
+    if (user && user.email) {
+      console.log("Fetching profile for:", user.email);
+      setLoading(true); // Ensure loading is set to true
+      const email = encodeURIComponent(user.email); // Ensure email is properly encoded
       try {
-        const response = await fetch('http://localhost:5000/api/profile');
-        if (response.ok) {
-          const profileData = await response.json();
-          setUser(profileData);
-          setUserProfile(profileData);
-          setRole(profileData.role || 'individual');
+        const res = await fetch(`http://localhost:5000/api/profile?email=${email}`);
+        if (!res.ok) {
+          throw new Error("Failed to fetch profile");
+        }
+        const data = await res.json();
+        if (data.profile) {
+          console.log("Profile fetched:", data.profile);
+          setUserProfile(data.profile);
+          setRole(data.role || "individual");
         } else {
-          console.error('No profile data found.');
+          setError("No profile data found.");
         }
       } catch (error) {
         console.error('Error fetching profile:', error.message);
+        setError(error.message); // Set error if there is one
       } finally {
-        setLoading(false);
+        setLoading(false); // Set loading to false after the fetch is done
+        console.log("Loading state:", loading); // Log the loading state
       }
-    };
-    fetchUserProfile();
-  }, []);
+    }
+  }; 
+
+  useEffect(() => {
+    if (user && role === "organization") {
+      fetch(`http://localhost:5000/api/get-organization-notifications/${user._id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          setNotifications(data);
+        })
+        .catch((err) => console.error("Error fetching notifications:", err));
+    }
+  }, [user, role]);
 
   // Function to logout user
   const logoutUser = () => {
@@ -225,6 +287,9 @@ export const UserProvider = ({ children }) => {
         error,
         uploadResumeToIPFS,
         applyToJob,
+        unreadMessages,
+        fetchUnreadMessages,
+        refreshUnreadMessages: fetchUnreadMessages,
       }}
     >
       {children}

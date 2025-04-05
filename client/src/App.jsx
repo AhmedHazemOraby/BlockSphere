@@ -16,6 +16,7 @@ import OrganizationDashboard from "./components/OrganizationDashboard";
 import JobDetails from './components/JobDetails';
 import CreateJob from './components/CreateJob';
 import MyJobs from './components/MyJobs';
+import ChatRoom from './components/ChatRoom';
 
 const App = () => {
   return (
@@ -37,6 +38,7 @@ const App = () => {
           <Route path="/jobs/:id" element={<JobDetails />} />
           <Route path="/create-job" element={<CreateJob />} />
           <Route path="/my-jobs" element={<MyJobs />} />
+          <Route path="/chat/:userId" element={<ChatRoom />} />
         </Routes>
       </div>
       <Footer />

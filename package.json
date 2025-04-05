@@ -6,6 +6,7 @@
     "hardhat": "^2.22.18"
   },
   "dependencies": {
-    "ipfs-http-client": "^60.0.1"
+    "ipfs-http-client": "^60.0.1",
+    "socket.io-client": "^4.8.1"
   }
 }
