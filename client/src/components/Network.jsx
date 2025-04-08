@@ -3,25 +3,319 @@ import { useUser } from "../context/UserContext";
 import { ethers } from "ethers";
 import { useNavigate } from 'react-router-dom';  // <-- Move the import here
 
-const contractAddress = "0xAbf4f0FA104e6dF73bDC6f2177503dC56B5aB071";
+const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
 const abi = [
   {
-    inputs: [
-      { internalType: "uint256", name: "_id", type: "uint256" },
-      { internalType: "bool", name: "_accepted", type: "bool" },
-      { internalType: "string", name: "_comment", type: "string" }
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "organization",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "ipfsHash",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "fee",
+        "type": "uint256"
+      }
     ],
-    name: "verifyCertificate",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function"
+    "name": "CertificateUploaded",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "accepted",
+        "type": "bool"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "comment",
+        "type": "string"
+      }
+    ],
+    "name": "CertificateVerified",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "PaymentTransferred",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "RefundIssued",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "certificateCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "certificates",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "organization",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "ipfsHash",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "fee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "verified",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "rejected",
+        "type": "bool"
+      },
+      {
+        "internalType": "string",
+        "name": "comment",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_id",
+        "type": "uint256"
+      }
+    ],
+    "name": "getCertificate",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "organization",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "ipfsHash",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "fee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "verified",
+        "type": "bool"
+      },
+      {
+        "internalType": "bool",
+        "name": "rejected",
+        "type": "bool"
+      },
+      {
+        "internalType": "string",
+        "name": "comment",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getContractBalance",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_organization",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "_ipfsHash",
+        "type": "string"
+      }
+    ],
+    "name": "uploadCertificate",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "_accepted",
+        "type": "bool"
+      },
+      {
+        "internalType": "string",
+        "name": "_comment",
+        "type": "string"
+      }
+    ],
+    "name": "verifyCertificate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   }
 ];
 
 const Network = () => {
   const { user, setUser } = useUser();
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState({ certificates: [], degrees: [] });
   const [allUsers, setAllUsers] = useState([]);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,11 +347,14 @@ const Network = () => {
     // Fetch org certificate notifications
     if (user.role === "organization") {
       fetch(`http://localhost:5000/api/get-organization-notifications/${user._id}`)
-        .then(res => res.json())
-        .then(data => {
-          setNotifications(Array.isArray(data) ? data : []);
-          setLoading(false);
-        })
+      .then(res => res.json())
+      .then(data => {
+        setNotifications({
+          certificates: data.certificates || [],
+          degrees: data.degrees || [],
+        });
+        setLoading(false);
+      })
         .catch(err => {
           console.error("Error fetching notifications:", err);
           setLoading(false);
@@ -91,7 +388,7 @@ const Network = () => {
       if (response === "accepted") {
         console.log("🔎 FULL Notification Object:", notification);
         console.log("🧩 Certificate ID:", notification?.certificateId);
-        const contractId = notification?.certificateId?.contractId;
+        const contractId = notification?.documentId?.contractId ?? null;
         if (contractId == null) {
           console.error("❌ contractId is missing for this certificate", notification);
           throw new Error("Missing contractId.");
@@ -113,7 +410,10 @@ const Network = () => {
         body: JSON.stringify({ notificationId, response, comment }),
       });
 
-      setNotifications(notifications.filter(n => n._id !== notificationId));
+      setNotifications((prev) => ({
+        ...prev,
+        certificates: prev.certificates.filter((n) => n._id !== notificationId),
+      }));
       setMessage(`Certificate ${response}`);
     } catch (error) {
       console.error("❌ Error updating certificate:", error);
@@ -121,6 +421,42 @@ const Network = () => {
     }
   };
 
+  const handleDegreeResponse = async (notificationId, response, comment = "", notification) => {
+    try {
+      const degreeId = notification?.documentId?._id || notification?.documentId;
+      if (!degreeId) throw new Error("Missing degreeId");
+  
+      // Fetch the full degree document from backend to get its contractId
+      const res = await fetch(`http://localhost:5000/api/degrees/${degreeId}`);
+      const degree = await res.json();
+  
+      if (!degree.contractId) throw new Error("Missing contractId from degree");
+  
+      if (response === "accepted") {
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const contract = new ethers.Contract(contractAddress, abi, signer);
+  
+        const tx = await contract.verifyCertificate(degree.contractId, true, comment);
+        await tx.wait();
+      }
+  
+      await fetch("http://localhost:5000/api/respond-degree", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId, response, comment }),
+      });
+  
+      setNotifications((prev) => ({
+        ...prev,
+        degrees: prev.degrees.filter((n) => n._id !== notificationId),
+      }));
+    } catch (err) {
+      console.error("❌ Error handling degree verification:", err);
+    }
+  };
+  
   const handleFriendResponse = async (requestId, status) => {
     if (user.role !== "individual") return;
 
@@ -191,23 +527,42 @@ const Network = () => {
        {user.role === "organization" && (
         <div className="w-full max-w-3xl">
           <h2 className="text-2xl font-semibold mb-4">Pending Certificates</h2>
-          {notifications.length ? (
-            notifications.map((notification) => (
-              <div key={notification._id} className="bg-white p-4 mb-4 shadow rounded">
-                <p><strong>User:</strong> {notification.userId?.name} ({notification.userId?.email})</p>
-                <p><strong>Description:</strong> {notification.certificateId?.description}</p>
-                {notification.certificateId?.certificateUrl ? (
-                  <a href={notification.certificateId.certificateUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500">
-                    View Certificate
-                  </a>
-                ) : <p>No certificate available.</p>}
-                <div className="mt-2">
-                  <button onClick={() => handleResponse(notification._id, "accepted", "", notification)} className="bg-green-500 text-white py-1 px-3 rounded mr-2">Accept</button>
-                  <button onClick={() => handleResponse(notification._id, "declined", "", notification)} className="bg-red-500 text-white py-1 px-3 rounded">Decline</button>
-                </div>
-              </div>
-            ))
-          ) : <p className="text-gray-500">No pending notifications.</p>}
+{notifications.certificates.length ? (
+  notifications.certificates.map((notification) => (
+    <div key={notification._id} className="bg-white p-4 mb-4 shadow rounded">
+      <p><strong>User:</strong> {notification.userId?.name} ({notification.userId?.email})</p>
+      <p><strong>Description:</strong> {notification.documentId?.description}</p>
+      {notification.documentId?.certificateUrl && (
+        <a href={notification.documentId.certificateUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500">
+          View Certificate
+        </a>
+      )}
+      <div className="mt-2">
+        <button onClick={() => handleResponse(notification._id, "accepted", "", notification)} className="bg-green-500 text-white py-1 px-3 rounded mr-2">Accept</button>
+        <button onClick={() => handleResponse(notification._id, "declined", "", notification)} className="bg-red-500 text-white py-1 px-3 rounded">Decline</button>
+      </div>
+    </div>
+  ))
+) : <p className="text-gray-500">No pending certificates.</p>}
+
+<h2 className="text-2xl font-semibold mt-6 mb-4">Pending Degrees</h2>
+{notifications.degrees.length ? (
+  notifications.degrees.map((notification) => (
+    <div key={notification._id} className="bg-white p-4 mb-4 shadow rounded">
+      <p><strong>User:</strong> {notification.userId?.name} ({notification.userId?.email})</p>
+      <p><strong>Description:</strong> {notification.documentId?.description}</p>
+      {notification.documentId?.degreeUrl && (
+        <a href={notification.documentId.degreeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500">
+          View Degree
+        </a>
+      )}
+      <div className="mt-2">
+        <button onClick={() => handleDegreeResponse(notification._id, "accepted", "", notification)} className="bg-green-500 text-white py-1 px-3 rounded mr-2">Accept</button>
+        <button onClick={() => handleDegreeResponse(notification._id, "declined", "", notification)} className="bg-red-500 text-white py-1 px-3 rounded">Decline</button>
+      </div>
+    </div>
+  ))
+) : <p className="text-gray-500">No pending degrees.</p>}
         </div>
       )}
 

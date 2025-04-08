@@ -12,6 +12,7 @@ const Job = require('./jobModel');
 const Application = require('./applicationModel');
 const FriendRequest = require("./FriendRequest");
 const Message = require("./Message");
+const Degree = require("./degreeModel");
 
 // Import postRoutes
 const postRoutes = require('./postRoutes');
@@ -87,6 +88,120 @@ app.post("/api/upload-certificate", upload.single("certificate"), async (req, re
   } catch (error) {
     console.error("❌ Error uploading certificate:", error.message);
     res.status(500).json({ message: "❌ Error uploading certificate", error: error.message });
+  }
+});
+
+app.post("/api/upload-degree", upload.single("degree"), async (req, res) => {
+  const { userId, organizationId, description } = req.body;
+
+  try {
+    if (!userId || !organizationId || !req.file || !description) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const ipfsUrl = await uploadToPinata(req.file.buffer, req.file.originalname);
+
+    const newDegree = new Degree({
+      userId,
+      organizationId,
+      degreeUrl: ipfsUrl,
+      description,
+      status: "unpaid",
+    });
+
+    await newDegree.save();
+
+    res.status(201).json({ message: "Degree uploaded successfully", degree: newDegree });
+  } catch (error) {
+    res.status(500).json({ message: "Error uploading degree", error: error.message });
+  }
+});
+
+app.post("/api/pay-degree-fee", async (req, res) => {
+  const { degreeId, transactionHash, contractId } = req.body;
+
+  try {
+    console.log("🎯 Incoming pay-degree-fee:", req.body);
+
+    const degree = await Degree.findByIdAndUpdate(
+      degreeId,
+      { transactionHash, contractId, status: "pending" },
+      { new: true }
+    );
+
+    if (!degree) {
+      console.error("❌ Degree not found for ID:", degreeId);
+      return res.status(404).json({ message: "Degree not found" });
+    }
+
+    const newNotification = new Notification({
+      organizationId: degree.organizationId,
+      userId: degree.userId,
+      documentId: degree._id,
+      status: "pending",
+      type: "degree",
+    });
+
+    await newNotification.save();
+
+    res.status(200).json({ message: "Payment saved and degree pending", degree });
+  } catch (error) {
+    console.error("❌ Error in /pay-degree-fee:", error.message, error);
+    res.status(500).json({ message: "Error saving payment", error: error.message });
+  }
+});
+
+app.post("/api/respond-degree", async (req, res) => {
+  const { notificationId, response, comment } = req.body;
+
+  try {
+    const notification = await Notification.findById(notificationId);
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+
+    // ✅ Check that the notification type is 'degree'
+    if (notification.type !== "degree") {
+      return res.status(400).json({ message: "Invalid notification type" });
+    }
+
+    const degree = await Degree.findById(notification.documentId);
+    if (!degree) {
+      return res.status(404).json({ message: "Degree not found" });
+    }
+
+    if (response === "accepted") {
+      degree.status = "verified";
+      await User.findByIdAndUpdate(degree.userId, {
+        $push: { degrees: degree._id },
+      });
+    } else {
+      degree.status = "declined";
+    }
+
+    await degree.save();
+
+    notification.status = response;
+    if (comment) notification.responseComment = comment;
+    await notification.save();
+
+    res.status(200).json({ message: `Degree ${response}` });
+  } catch (error) {
+    console.error("❌ Error in respond-degree:", error.message);
+    res.status(500).json({ message: "Error responding to degree", error: error.message });
+  }
+});
+
+app.get("/api/get-user-degrees/:userId", async (req, res) => {
+  try {
+    const degrees = await Degree.find({
+      userId: req.params.userId,
+      status: "verified",
+    }).populate("organizationId", "name");
+
+    res.status(200).json(degrees);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching degrees", error: error.message });
   }
 });
 
@@ -290,34 +405,40 @@ app.get('/api/my-jobs/:orgId', async (req, res) => {
 
 app.get("/api/get-organization-notifications/:organizationId", async (req, res) => {
   try {
-    console.log("🔍 Fetching notifications for organization:", req.params.organizationId);
+    const orgId = req.params.organizationId;
+    console.log("📥 Incoming notification request for org:", orgId);
 
-    // Check if the organization exists before fetching notifications
-    const organization = await organizationModel.findById(req.params.organizationId);
+    // 🔍 Check if organization exists
+    const organization = await organizationModel.findById(orgId);
     if (!organization) {
-      console.error("❌ Organization not found:", req.params.organizationId);
+      console.warn("❌ Organization not found for ID:", orgId);
       return res.status(404).json({ message: "Organization not found" });
     }
 
-    const notifications = await Notification.find({
-      organizationId: req.params.organizationId,
+    // 📦 Fetch all 'pending' notifications for the organization
+    const allNotifications = await Notification.find({
+      organizationId: orgId,
       status: "pending",
     })
-    .populate("userId", "name email")
-    .populate("certificateId") // populate all fields    
+      .populate("userId", "name email")
+      .populate("documentId");
 
-    console.log("📩 Found notifications:", notifications);
-
-    // Check if notifications exist before sending response
-    if (!notifications.length) {
-      console.warn("⚠️ No notifications found for organization:", req.params.organizationId);
-      return res.status(200).json([]); // Return empty array
+    if (!allNotifications.length) {
+      console.info("ℹ️ No pending notifications for org:", orgId);
     }
 
-    res.status(200).json(notifications);
+    // 🧹 Filter certificates and degrees with safe fallback
+    const certificates = allNotifications.filter(n => (n.type || "").toLowerCase() === "certificate");
+    const degrees = allNotifications.filter(n => (n.type || "").toLowerCase() === "degree" &&
+    n.documentId);
+
+    console.log(`✅ Notifications fetched — Certs: ${certificates.length}, Degrees: ${degrees.length}`);
+
+    return res.status(200).json({ certificates, degrees });
+
   } catch (error) {
-    console.error("❌ Server Error Fetching Notifications:", error);
-    res.status(500).json({ message: "Server error fetching notifications", error: error.message });
+    console.error("❌ Error fetching notifications:", error);
+    return res.status(500).json({ message: "Error fetching notifications", error: error.message });
   }
 });
 
@@ -336,7 +457,7 @@ app.post("/api/respond-certificate", async (req, res) => {
     await notification.save();
 
     // ✅ Update certificate status
-    const certificate = await Certificate.findById(notification.certificateId);
+    const certificate = await Certificate.findById(notification.documentId);
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
     }
@@ -360,6 +481,16 @@ app.post("/api/respond-certificate", async (req, res) => {
   } catch (error) {
     console.error("Error responding to certificate:", error.message);
     res.status(500).json({ message: "Error processing response", error: error.message });
+  }
+});
+
+app.get("/api/degrees/:id", async (req, res) => {
+  try {
+    const degree = await Degree.findById(req.params.id);
+    if (!degree) return res.status(404).json({ message: "Degree not found" });
+    res.status(200).json(degree);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching degree", error: err.message });
   }
 });
 
@@ -410,39 +541,59 @@ app.post("/api/pay-certificate-fee", async (req, res) => {
   try {
     console.log("📥 Incoming payment payload:", req.body);
 
+    // 🔒 Validate required fields
     if (!certificateId || !transactionHash || contractId === undefined) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    // 🔄 Update certificate in DB
     const updatedCertificate = await Certificate.findByIdAndUpdate(
       certificateId,
-      { transactionHash, contractId, status: "pending" },
+      {
+        transactionHash,
+        contractId,
+        status: "pending",
+      },
       { new: true }
     );
 
-    console.log("📄 Certificate after payment:", updatedCertificate);
-
     if (!updatedCertificate) {
+      console.error("❌ Certificate not found for ID:", certificateId);
       return res.status(404).json({ message: "Certificate not found" });
     }
 
+    console.log("📄 Certificate after update:", updatedCertificate);
+
+    // 🛡️ Defensive check
+    if (!updatedCertificate.organizationId || !updatedCertificate.userId) {
+      return res.status(400).json({ message: "Missing organization or user ID in certificate" });
+    }
+
+    // 🔔 Create notification (capitalize type to match schema!)
     const newNotification = new Notification({
       organizationId: updatedCertificate.organizationId,
       userId: updatedCertificate.userId,
-      certificateId: updatedCertificate._id,
-      message: "New certificate uploaded by user for verification.",
+      documentId: updatedCertificate._id,
       status: "pending",
+      type: "certificate",
     });
 
-    await newNotification.save();
+    const saved = await newNotification.save();
 
+    console.log("✅ Notification saved to DB:", saved);
+
+    // 🎯 Success
     res.status(200).json({
       message: "✅ Payment recorded and certificate is now pending verification.",
       certificate: updatedCertificate,
     });
+
   } catch (error) {
-    console.error("Error storing transaction hash:", error.message);
-    res.status(500).json({ message: "Error storing transaction hash", error: error.message });
+    console.error("❌ Error processing certificate fee:", error);
+    res.status(500).json({
+      message: "Error storing transaction hash",
+      error: error.message,
+    });
   }
 });
 

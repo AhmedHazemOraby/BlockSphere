@@ -7,6 +7,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { user, role, updateUserProfile } = useUser();
   const [certificates, setCertificates] = useState([]);
+  const [degrees, setDegrees] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -38,6 +39,7 @@ const Profile = () => {
       // ✅ Ensure user ID exists before fetching certificates
       if (user._id) {
         fetchVerifiedCertificates(user._id);
+        fetchVerifiedDegrees(user._id);
       }
     }
   }, [user]);
@@ -52,6 +54,17 @@ const Profile = () => {
       setCertificates(data.filter(cert => cert.status === "verified"));
     } catch (error) {
       console.error("Error fetching certificates:", error);
+    }
+  }; 
+  
+  const fetchVerifiedDegrees = async (userId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/get-user-degrees/${userId}`);
+      if (!response.ok) throw new Error("Failed to fetch degrees");
+      const data = await response.json();
+      setDegrees(data.filter((deg) => deg.status === "verified"));
+    } catch (err) {
+      console.error("Error fetching degrees:", err);
     }
   };  
 
@@ -157,7 +170,29 @@ const Profile = () => {
             ) : (
               <>
                 <p className="text-gray-500">Workplace: {user.workplace || 'N/A'}</p>
-                <p className="text-gray-500">Degrees: {user.degrees || 'N/A'}</p>
+                <h3 className="text-lg font-bold mt-4">Degrees</h3>
+<ul>
+  {degrees.length > 0 ? (
+    degrees.map((deg) => (
+      <li key={deg._id} className="mt-2 border p-2 rounded shadow-sm bg-white">
+        <img src={deg.degreeUrl} alt="Degree" className="w-full max-w-xs rounded-md" />
+        <p className="text-gray-600">{deg.description}</p>
+        <p className="text-sm text-gray-500">
+          Verified by: <span className="font-semibold">{deg.organizationId?.name || "Unknown Organization"}</span>
+        </p>
+        <p className="text-sm text-gray-500">
+          Status:{" "}
+          <span className={`font-semibold ${deg.status === "verified" ? "text-green-600" : "text-yellow-600"}`}>
+            {deg.status}
+          </span>
+        </p>
+      </li>
+    ))
+  ) : (
+    <p className="text-gray-500">No verified degrees yet.</p>
+  )}
+</ul>
+
                 <h3 className="text-lg font-bold mt-4">Certificates</h3>
                 <ul>
                   {certificates.length > 0 ? (
@@ -246,26 +281,36 @@ const Profile = () => {
                   className="w-full p-2 border border-gray-300 rounded"
                 />
               </div>
+              <h3 className="text-lg font-bold mt-6">Degrees</h3>
+<ul>
+  {degrees.length > 0 ? (
+    degrees.map((deg) => (
+      <li key={deg._id} className="mt-2 border p-2 rounded shadow-sm bg-white">
+        <img src={deg.degreeUrl} alt="Degree" className="w-full max-w-xs rounded-md" />
+        <p className="text-gray-600">{deg.description}</p>
+        <p className="text-sm text-gray-500">
+          Verified by: <span className="font-semibold">{deg.organizationId?.name || "Unknown Organization"}</span>
+        </p>
+        <p className="text-sm text-gray-500">
+          Status:{" "}
+          <span className={`font-semibold ${deg.status === "verified" ? "text-green-600" : "text-yellow-600"}`}>
+            {deg.status}
+          </span>
+        </p>
+      </li>
+    ))
+  ) : (
+    <p className="text-gray-500">No verified degrees yet.</p>
+  )}
+</ul>
+                  <button
+  onClick={() => navigate("/upload-degree")}
+  className="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 mt-2"
+>
+  Upload Degree
+</button>
               <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Degrees</label>
-                <input
-                  type="text"
-                  name="degrees"
-                  value={formData.degrees}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded"
-                />
-              </div>
-              <div className="mb-4">
-              {/* Upload Certificate Button */}
-              <div className="mt-4">
-                <button
-                  onClick={() => navigate("/upload-certificate")} // Redirects to UploadCertificate.jsx
-                  className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-                >
-                  Upload Certificate
-                </button>
-              </div>
+              
 
               {/* Verified Certificates Section */}
               <h3 className="text-lg font-bold mt-4">Certificates</h3>
@@ -292,7 +337,16 @@ const Profile = () => {
               </ul>
               </div>
             </>
-          )}
+            )}
+            {/* Upload Certificate Button */}
+            <div className="mt-4">
+                <button
+                  onClick={() => navigate("/upload-certificate")} // Redirects to UploadCertificate.jsx
+                  className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+                >
+                  Upload Certificate
+                </button>
+              </div>
           <button
             onClick={handleSave}
             className="w-full bg-green-500 text-white py-2 px-4 rounded-full hover:bg-green-600 mt-2"

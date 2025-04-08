@@ -17,6 +17,7 @@ import JobDetails from './components/JobDetails';
 import CreateJob from './components/CreateJob';
 import MyJobs from './components/MyJobs';
 import ChatRoom from './components/ChatRoom';
+import UploadDegree from "./components/UploadDegree";
 
 const App = () => {
   return (
@@ -39,6 +40,7 @@ const App = () => {
           <Route path="/create-job" element={<CreateJob />} />
           <Route path="/my-jobs" element={<MyJobs />} />
           <Route path="/chat/:userId" element={<ChatRoom />} />
+          <Route path="/upload-degree" element={<UploadDegree />} />
         </Routes>
       </div>
       <Footer />

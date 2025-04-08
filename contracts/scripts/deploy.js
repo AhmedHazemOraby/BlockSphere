@@ -21,17 +21,17 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-  const [deployer] = await ethers.getSigners(); // 👈 Use Hardhat's pre-funded account
+  const [deployer] = await ethers.getSigners();
   console.log(`💰 Deployer Address: ${deployer.address}`);
 
-  const CertificateManager = await ethers.getContractFactory("CertificateManager");
-  console.log("🚀 Deploying CertificateManager contract on Local Hardhat Node...");
+  const CertificatePayment = await ethers.getContractFactory("CertificatePayment"); // ✅ updated
+  console.log("🚀 Deploying CertificatePayment contract on Local Hardhat Node...");
 
-  const contract = await CertificateManager.deploy();
+  const contract = await CertificatePayment.deploy();
   await contract.waitForDeployment();
 
   const contractAddress = await contract.getAddress();
-  console.log("✅ Deployed CertificateManager at:", contractAddress);
+  console.log("✅ Deployed CertificatePayment at:", contractAddress);
 }
 
 main()

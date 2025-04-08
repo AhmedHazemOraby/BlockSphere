@@ -1,19 +1,17 @@
 const mongoose = require("mongoose");
 
-const certificateSchema = new mongoose.Schema({
+const degreeSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   organizationId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", required: true },
-  certificateUrl: { type: String, required: true },
+  degreeUrl: { type: String, required: true },
   description: { type: String, required: true },
   status: {
     type: String,
     enum: ["unpaid", "pending", "verified", "declined"],
     default: "unpaid",
   },
-  transactionHash: { type: String, default: "" },
-  contractId: { type: Number, required: false }, 
+  transactionHash: { type: String },
+  contractId: { type: Number },
 }, { timestamps: true });
 
-const Certificate = mongoose.model("certificate", certificateSchema);
-
-module.exports = Certificate;
+module.exports = mongoose.model("degree", degreeSchema);
