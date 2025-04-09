@@ -127,10 +127,13 @@ export const UserProvider = ({ children }) => {
         formData.append("numWorkers", data.numWorkers);
         formData.append("accolades", data.accolades);
       } else {
-        formData.append("workplace", data.workplace);
         formData.append("degrees", data.degrees);
         formData.append("certifications", data.certifications);
         formData.append("walletAddress", data.walletAddress);
+        formData.append("education", JSON.stringify(data.education));
+        formData.append("jobExperiences", JSON.stringify(data.jobExperiences));
+        formData.append("internships", JSON.stringify(data.internships));
+
       }
   
       const response = await fetch("http://localhost:5000/api/profile", {
@@ -144,8 +147,6 @@ export const UserProvider = ({ children }) => {
         setUser(updatedAccount);
         setUserProfile(updatedAccount);
         setError(null);
-        
-        window.location.reload();
       } else {
         const errorData = await response.json();
         throw new Error(errorData.message);
@@ -289,6 +290,7 @@ export const UserProvider = ({ children }) => {
         applyToJob,
         unreadMessages,
         fetchUnreadMessages,
+        fetchUserProfile,
         refreshUnreadMessages: fetchUnreadMessages,
       }}
     >

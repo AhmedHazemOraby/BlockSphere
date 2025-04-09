@@ -10,10 +10,12 @@ const EditProfile = () => {
     name: user?.name || '',
     email: user?.email || '',
     photo: null,
-    workplace: user?.workplace || '',
     degrees: user?.degrees || '',
     certifications: user?.certifications || '',
     walletAddress: user?.walletAddress || '',
+    education: user?.education || "",
+    jobExperiences: user?.jobExperiences || "",
+    internships: user?.internships || "",
   });
 
   useEffect(() => {
@@ -22,10 +24,12 @@ const EditProfile = () => {
         ...prev,
         name: user.name || '',
         email: user.email || '',
-        workplace: user.workplace || '',
         degrees: user.degrees || '',
         certifications: user.certifications || '',
         walletAddress: user.walletAddress || '',
+        education: user.education || '',
+        jobExperiences: user.jobExperiences || '',
+        internships: user.internships || '',
       }));
     }
   }, [user]);
@@ -113,15 +117,37 @@ const EditProfile = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-gray-700 mb-2">Workplace</label>
-          <input
-            type="text"
-            name="workplace"
-            value={formData.workplace}
-            onChange={handleInputChange}
-            className="w-full p-2 border border-gray-300 rounded"
-          />
-        </div>
+  <label className="block text-gray-700 mb-2">Education</label>
+  <textarea
+    name="education"
+    value={formData.education}
+    onChange={handleInputChange}
+    className="w-full p-2 border border-gray-300 rounded"
+    rows={3}
+  ></textarea>
+</div>
+
+<div className="mb-4">
+  <label className="block text-gray-700 mb-2">Job Experiences</label>
+  <textarea
+    name="jobExperiences"
+    value={formData.jobExperiences}
+    onChange={handleInputChange}
+    className="w-full p-2 border border-gray-300 rounded"
+    rows={3}
+  ></textarea>
+</div>
+
+<div className="mb-4">
+  <label className="block text-gray-700 mb-2">Internships</label>
+  <textarea
+    name="internships"
+    value={formData.internships}
+    onChange={handleInputChange}
+    className="w-full p-2 border border-gray-300 rounded"
+    rows={3}
+  ></textarea>
+</div>
         <div className="mb-4">
           <label className="block text-gray-700 mb-2">Degrees</label>
           <input

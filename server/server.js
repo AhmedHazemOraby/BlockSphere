@@ -729,6 +729,78 @@ app.get("/api/profile", async (req, res) => {
   }
 });
 
+app.put("/api/profile", upload.single("photo"), async (req, res) => {
+  const { email, role } = req.body;
+
+  if (!email || !role) {
+    return res.status(400).json({ message: "Email and role are required" });
+  }
+
+  try {
+    let updateData = { ...req.body };
+
+    // ✅ Handle uploaded profile photo
+    if (req.file) {
+      const photoUrl = await uploadToPinata(req.file.buffer, req.file.originalname);
+      updateData.photoUrl = photoUrl;
+    }
+
+    // 🚫 Clean up unneeded fields
+    delete updateData.role;
+    delete updateData.photo;
+
+    // ✅ Convert stringified structured fields back to arrays of objects
+    const fieldsToParse = [
+      "degrees",
+      "certifications",
+      "education",
+      "jobExperiences",
+      "internships",
+    ];
+
+    fieldsToParse.forEach((field) => {
+      if (updateData[field] && typeof updateData[field] === "string") {
+        try {
+          const parsed = JSON.parse(updateData[field]);
+          if (Array.isArray(parsed)) {
+            updateData[field] = parsed;
+          } else {
+            console.warn(`⚠️ Parsed '${field}' is not an array`);
+          }
+        } catch (err) {
+          console.warn(`⚠️ Failed to parse field '${field}':`, err.message);
+          updateData[field] = [];
+        }
+      }
+    });    
+
+    // ✅ Update depending on role
+    let updatedProfile;
+    if (role === "organization") {
+      updatedProfile = await organizationModel.findOneAndUpdate(
+        { email },
+        updateData,
+        { new: true }
+      );
+    } else {
+      updatedProfile = await User.findOneAndUpdate(
+        { email },
+        updateData,
+        { new: true }
+      );
+    }
+
+    if (!updatedProfile) {
+      return res.status(404).json({ message: "Profile not found" });
+    }
+
+    res.status(200).json({ message: "Profile updated successfully", updatedProfile });
+  } catch (error) {
+    console.error("❌ Error updating profile:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
 // Fetch all users except the current one
 app.get("/api/users", async (req, res) => {
   const currentUserId = req.query.currentUserId;
