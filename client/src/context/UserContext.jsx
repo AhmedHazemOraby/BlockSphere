@@ -14,6 +14,7 @@ export const UserProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [notifications, setNotifications] = useState([]);
   const [unreadMessages, setUnreadMessages] = useState([]);
+  const [refetchTrigger, setRefetchTrigger] = useState(false);
 
   const fetchUnreadMessages = async () => {
     if (user?.email) {
@@ -125,7 +126,7 @@ export const UserProvider = ({ children }) => {
       if (data.role === "organization") {
         formData.append("establishedSince", data.establishedSince);
         formData.append("numWorkers", data.numWorkers);
-        formData.append("accolades", data.accolades);
+        formData.append("accolades", JSON.stringify(data.accolades));
       } else {
         formData.append("degrees", data.degrees);
         formData.append("certifications", data.certifications);
@@ -239,6 +240,7 @@ export const UserProvider = ({ children }) => {
           console.log("Profile fetched:", data.profile);
           setUserProfile(data.profile);
           setRole(data.role || "individual");
+          setRefetchTrigger(prev => !prev); 
         } else {
           setError("No profile data found.");
         }
@@ -276,10 +278,12 @@ export const UserProvider = ({ children }) => {
       value={{
         user,
         setUser,
+        setRefetchTrigger,
         userProfile,
         role,
         notifications,
         registerUser,
+        refetchTrigger,
         updateUserProfile,
         loginUser,
         loginWithWallet,

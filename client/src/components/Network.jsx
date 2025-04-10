@@ -320,6 +320,7 @@ const Network = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const { fetchUserProfile, setRefetchTrigger } = useUser();
 
   const navigate = useNavigate();  // <-- Move this inside the component
 
@@ -383,6 +384,12 @@ const Network = () => {
     }
   };
 
+  const fetchNotifications = async () => {
+    const res = await fetch(`http://localhost:5000/api/get-organization-notifications/${user._id}`);
+    const data = await res.json();
+    setNotifications(data);
+  };  
+
   const handleResponse = async (notificationId, response, comment = "", notification) => {
     try {
       if (response === "accepted") {
@@ -421,41 +428,28 @@ const Network = () => {
     }
   };
 
-  const handleDegreeResponse = async (notificationId, response, comment = "", notification) => {
+  const handleDegreeResponse = async (notificationId, response, comment = "") => {
     try {
-      const degreeId = notification?.documentId?._id || notification?.documentId;
-      if (!degreeId) throw new Error("Missing degreeId");
-  
-      // Fetch the full degree document from backend to get its contractId
-      const res = await fetch(`http://localhost:5000/api/degrees/${degreeId}`);
-      const degree = await res.json();
-  
-      if (!degree.contractId) throw new Error("Missing contractId from degree");
-  
-      if (response === "accepted") {
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const contract = new ethers.Contract(contractAddress, abi, signer);
-  
-        const tx = await contract.verifyCertificate(degree.contractId, true, comment);
-        await tx.wait();
-      }
-  
-      await fetch("http://localhost:5000/api/respond-degree", {
+      const res = await fetch("http://localhost:5000/api/respond-degree", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notificationId, response, comment }),
       });
   
-      setNotifications((prev) => ({
-        ...prev,
-        degrees: prev.degrees.filter((n) => n._id !== notificationId),
-      }));
-    } catch (err) {
-      console.error("❌ Error handling degree verification:", err);
+      if (!res.ok) throw new Error("Failed to respond to degree");
+  
+      const data = await res.json();
+      console.log("✅ Degree response submitted:", data);
+  
+      await fetchUserProfile();            
+      setRefetchTrigger(prev => !prev);   
+  
+      await fetchNotifications();        
+  
+    } catch (error) {
+      console.error("❌ Error handling degree verification:", error);
     }
-  };
+  };  
   
   const handleFriendResponse = async (requestId, status) => {
     if (user.role !== "individual") return;
@@ -557,8 +551,8 @@ const Network = () => {
         </a>
       )}
       <div className="mt-2">
-        <button onClick={() => handleDegreeResponse(notification._id, "accepted", "", notification)} className="bg-green-500 text-white py-1 px-3 rounded mr-2">Accept</button>
-        <button onClick={() => handleDegreeResponse(notification._id, "declined", "", notification)} className="bg-red-500 text-white py-1 px-3 rounded">Decline</button>
+        <button onClick={() => handleDegreeResponse(notification._id, "accepted")} className="bg-green-500 text-white py-1 px-3 rounded mr-2">Accept</button>
+        <button onClick={() => handleDegreeResponse(notification._id, "declined")} className="bg-red-500 text-white py-1 px-3 rounded">Decline</button>
       </div>
     </div>
   ))

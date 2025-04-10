@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import defaultUserImage from '../../images/defaultUserImage.png';
-import { FaBriefcase, FaGraduationCap, FaUserTie, FaCertificate, FaAward } from "react-icons/fa";
+import { FaBriefcase, FaGraduationCap, FaUserTie, FaCertificate, FaAward, FaTrash } from "react-icons/fa";
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { userProfile, role, updateUserProfile, fetchUserProfile } = useUser();
+  const { userProfile, role, updateUserProfile, fetchUserProfile, setUser, setRefetchTrigger } = useUser();
   const user = userProfile;
   const [certificates, setCertificates] = useState([]);
   const [degrees, setDegrees] = useState([]);
@@ -17,6 +17,9 @@ const Profile = () => {
   const [showEduForm, setShowEduForm] = useState(false);
   const [showJobForm, setShowJobForm] = useState(false);
   const [showInternForm, setShowInternForm] = useState(false);
+  const [accolades, setAccolades] = useState([]);
+  const [newAccolade, setNewAccolade] = useState({ title: '', description: '', year: '', photo: null });
+  const [showAccoladeForm, setShowAccoladeForm] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,7 +29,7 @@ const Profile = () => {
     walletAddress: "",
     establishedSince: "",
     numWorkers: "",
-    accolades: "",
+    accolades: Array.isArray(userProfile?.accolades) ? userProfile.accolades : [],
     education: Array.isArray(user?.education) ? user.education : [],
     jobExperiences: Array.isArray(user?.jobExperiences) ? user.jobExperiences : [],
     internships: Array.isArray(user?.internships) ? user.internships : [],
@@ -42,7 +45,7 @@ const Profile = () => {
       walletAddress: userProfile.walletAddress || "",
       establishedSince: userProfile.establishedSince || "",
       numWorkers: userProfile.numWorkers || "",
-      accolades: userProfile.accolades || "",
+      accolades: Array.isArray(userProfile.accolades) ? userProfile.accolades : [],
       education: Array.isArray(userProfile?.education) ? userProfile.education : [],
       jobExperiences: Array.isArray(userProfile?.jobExperiences) ? userProfile.jobExperiences : [],
       internships: Array.isArray(userProfile?.internships) ? userProfile.internships : [],
@@ -79,6 +82,48 @@ const Profile = () => {
     }
   };  
 
+  const handleAccoladeFile = (e) => {
+    setNewAccolade(prev => ({ ...prev, photo: e.target.files[0] }));
+  };
+  
+  const uploadAccoladePhoto = async (photo) => {
+    const formData = new FormData();
+    formData.append("file", photo);
+    const res = await fetch("http://localhost:5000/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) throw new Error("Failed to upload accolade photo");
+    const data = await res.json();
+    return data.url;
+  };
+  
+  const handleAddAccolade = async () => {
+    try {
+      let photoUrl = '';
+      if (newAccolade.photo) {
+        photoUrl = await uploadAccoladePhoto(newAccolade.photo);
+      }
+  
+      const newEntry = {
+        title: newAccolade.title,
+        description: newAccolade.description,
+        year: newAccolade.year,
+        photoUrl,
+      };
+  
+      setFormData((prev) => ({
+        ...prev,
+        accolades: [...(Array.isArray(prev.accolades) ? prev.accolades : []), newEntry],
+      }));
+  
+      setNewAccolade({ title: '', description: '', year: '', photo: null });
+      setShowAccoladeForm(false);
+    } catch (err) {
+      console.error("Error uploading accolade:", err);
+    }
+  }; 
+
   const sanitizedPhotoUrl = userProfile?.photoUrl
     ? userProfile.photoUrl.replace('http://localhost:8080', 'https://gateway.pinata.cloud/ipfs')
     : defaultUserImage;
@@ -93,7 +138,11 @@ const Profile = () => {
       walletAddress: userProfile.walletAddress || "",
       establishedSince: userProfile.establishedSince || "",
       numWorkers: userProfile.numWorkers || "",
-      accolades: userProfile.accolades || "",
+      accolades: Array.isArray(userProfile?.accolades)
+    ? userProfile.accolades
+    : userProfile?.accolades
+      ? JSON.parse(userProfile.accolades)
+      : [],  
       education: Array.isArray(userProfile?.education) ? userProfile.education : [],
       jobExperiences: Array.isArray(userProfile?.jobExperiences) ? userProfile.jobExperiences : [],
       internships: Array.isArray(userProfile?.internships) ? userProfile.internships : [],
@@ -115,8 +164,25 @@ const Profile = () => {
     setFormData((prev) => ({ ...prev, photo: e.target.files[0] }));
   };
 
+  const uploadPhoto = async (photo) => {
+    const formData = new FormData();
+    formData.append("file", photo);
+  
+    const response = await fetch("http://localhost:5000/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+  
+    if (!response.ok) throw new Error("Failed to upload photo");
+  
+    const data = await response.json();
+    return data.url; // ✅ IPFS URL from server
+  };  
+
   const handleSave = async () => {
     try {
+      let photoUrl = formData.photo ? await uploadPhoto(formData.photo) : userProfile.photoUrl;
+  
       const payload = new FormData();
       payload.append("email", formData.email);
       payload.append("role", role);
@@ -124,17 +190,20 @@ const Profile = () => {
       payload.append("walletAddress", formData.walletAddress || "");
       payload.append("establishedSince", formData.establishedSince || "");
       payload.append("numWorkers", formData.numWorkers || "");
-      payload.append("accolades", formData.accolades || "");
+      payload.append("accolades", JSON.stringify(formData.accolades || []));
+      payload.append("photoUrl", photoUrl); // ✅ Add this explicitly
   
-      // Convert structured fields into JSON strings
       payload.append("education", JSON.stringify(formData.education));
       payload.append("jobExperiences", JSON.stringify(formData.jobExperiences));
       payload.append("internships", JSON.stringify(formData.internships));
-      payload.append("degrees", JSON.stringify(formData.degrees));
-      payload.append("certifications", JSON.stringify(formData.certifications));
+
+      if (role === "individual") {
+        payload.append("degrees", JSON.stringify(formData.degrees || []));
+        payload.append("certifications", JSON.stringify(formData.certifications || []));
+      }
   
       if (formData.photo) {
-        payload.append("photo", formData.photo);
+        payload.append("photo", formData.photo); // still send the file
       }
   
       const response = await fetch("http://localhost:5000/api/profile", {
@@ -142,15 +211,11 @@ const Profile = () => {
         body: payload,
       });
   
-      if (!response.ok) {
-        throw new Error("Failed to update profile");
-      }
+      if (!response.ok) throw new Error("Failed to update profile");
   
-      const data = await response.json();
-      console.log("✅ Profile updated:", data);
-  
-      await fetchUserProfile(); // refresh context
-  
+      await fetchUserProfile();
+      setRefetchTrigger(prev => !prev);
+      setUser(prev => ({ ...prev, photoUrl }));
       setTimeout(() => {
         alert("Profile updated successfully!");
         setIsEditing(false);
@@ -188,24 +253,41 @@ const Profile = () => {
     setShowInternForm(false);
   };  
 
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-  
+  const handleRemoveItem = (field, index) => {
+    const updatedList = [...formData[field]];
+    updatedList.splice(index, 1);
+    setFormData(prev => ({ ...prev, [field]: updatedList }));
+  };
+
+  const handleDeleteCertificate = async (certificateId) => {
     try {
-      const ipfsUrl = await uploadPhoto(file);
+      const res = await fetch(`http://localhost:5000/api/delete-certificate/${certificateId}`, {
+        method: 'DELETE',
+      });
   
-      const updatedData = {
-        ...formData,
-        photoUrl: ipfsUrl,
-      };
-  
-      await updateUserProfile(updatedData);
-      await fetchUserProfile();
-      alert("Profile picture updated!");
+      if (res.ok) {
+        setCertificates(prev => prev.filter(c => c._id !== certificateId));
+      } else {
+        console.error("Failed to delete certificate");
+      }
     } catch (err) {
-      console.error("Error uploading profile picture:", err);
-      alert("Failed to upload profile picture.");
+      console.error("Error deleting certificate:", err.message);
+    }
+  };
+  
+  const handleDeleteDegree = async (degreeId) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/delete-degree/${degreeId}`, {
+        method: 'DELETE',
+      });
+  
+      if (res.ok) {
+        setDegrees(prev => prev.filter(d => d._id !== degreeId));
+      } else {
+        console.error("Failed to delete degree");
+      }
+    } catch (err) {
+      console.error("Error deleting degree:", err.message);
     }
   };  
 
@@ -232,10 +314,55 @@ const Profile = () => {
             <p className="text-gray-500">{userProfile.email}</p>
             {role === 'organization' ? (
               <>
-                <p className="text-gray-500">Organization Type: {userProfile.organizationType || "Not specified"}</p>
-                <p className="text-gray-500">Established Since: {userProfile.establishedSince ? new Date(userProfile.establishedSince).getFullYear() : 'N/A'}</p>
-                <p className="text-gray-500">Number of Workers: {userProfile.numWorkers || 'N/A'}</p>
-                <p className="text-gray-500">Accolades: {userProfile.accolades || 'N/A'}</p>
+                {/* Organization Profile Section */}
+                <div className="text-center text-gray-700 w-full">
+
+                {/* Type */}
+                <h3 className="text-lg font-bold mt-6 flex items-center justify-center gap-2">
+                  <FaBriefcase /> Type
+                </h3>
+                <p className="text-gray-600">{userProfile.organizationType || "N/A"}</p>
+
+                {/* Established */}
+                <h3 className="text-lg font-bold mt-6 flex items-center justify-center gap-2">
+                  <FaGraduationCap /> Established
+                </h3>
+                <p className="text-gray-600">
+                  {userProfile.establishedSince ? new Date(userProfile.establishedSince).getFullYear() : 'N/A'}
+                </p>
+
+                {/* Workers */}
+                <h3 className="text-lg font-bold mt-6 flex items-center justify-center gap-2">
+                  <FaUserTie /> Workers
+                </h3>
+                <p className="text-gray-600">{userProfile.numWorkers || "N/A"}</p>
+
+                {/* Accolades */}
+                <h3 className="text-lg font-bold mt-6 flex items-center gap-2 justify-center">
+                  <FaAward /> Accolades
+                </h3>
+                {Array.isArray(userProfile.accolades) && userProfile.accolades.length > 0 ? (
+                  <ul className="mb-4 w-full flex flex-col items-center">
+                    {userProfile.accolades
+                      .filter(acc => acc?.title && acc?.description && acc?.year)
+                      .map((acc, index) => (
+                        <li key={index} className="mb-4 text-center">
+                          <strong>{acc.title}</strong> <span className="text-xs text-gray-400">({acc.year})</span>
+                          <p className="text-gray-600">{acc.description}</p>
+                          {acc.photoUrl && (
+                            <img
+                              src={acc.photoUrl.replace('http://localhost:8080', 'https://gateway.pinata.cloud/ipfs')}
+                              alt={acc.title}
+                              className="mt-2 w-full max-w-xs rounded-md shadow"
+                            />
+                          )}
+                        </li>
+                      ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 text-center mb-4">No accolades yet.</p>
+                )}
+                </div>
               </>
             ) : (
               <>
@@ -391,24 +518,73 @@ const Profile = () => {
                   className="w-full p-2 border border-gray-300 rounded"
                 />
               </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Accolades</label>
-                <textarea
-                  name="accolades"
-                  value={formData.accolades}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border border-gray-300 rounded"
-                ></textarea>
-              </div>
+              <h3 className="text-md font-semibold mt-4">Accolades</h3>
+                <ul>
+                  {Array.isArray(formData.accolades) && formData.accolades.map((acc, idx) => (
+                    <li key={idx} className="mb-2 border rounded p-2 relative group">
+                    <strong>{acc.title}</strong> — {acc.description} ({acc.year})
+                    {acc.photoUrl && <img src={acc.photoUrl} alt="Accolade" className="w-full max-w-xs mt-2 rounded-md" />}
+                    <button
+                      onClick={() => handleRemoveItem('accolades', idx)}
+                      className="absolute top-2 right-2 text-red-500 hover:text-red-700 hidden group-hover:block"
+                    >
+                      <FaTrash />
+                    </button>
+                  </li>                  
+                  ))}
+                </ul>
+
+                {showAccoladeForm ? (
+                  <div className="mb-4 mt-2">
+                    <input
+                      type="text"
+                      placeholder="Title"
+                      value={newAccolade.title}
+                      onChange={(e) => setNewAccolade({ ...newAccolade, title: e.target.value })}
+                      className="w-full mb-2 p-2 border border-gray-300 rounded"
+                    />
+                    <textarea
+                      placeholder="Description"
+                      value={newAccolade.description}
+                      onChange={(e) => setNewAccolade({ ...newAccolade, description: e.target.value })}
+                      className="w-full mb-2 p-2 border border-gray-300 rounded"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Year"
+                      value={newAccolade.year}
+                      onChange={(e) => setNewAccolade({ ...newAccolade, year: e.target.value })}
+                      className="w-full mb-2 p-2 border border-gray-300 rounded"
+                    />
+                    <input type="file" accept="image/*" onChange={handleAccoladeFile} className="mb-2" />
+                    <div className="flex gap-2">
+                      <button onClick={handleAddAccolade} className="bg-green-500 text-white px-4 py-1 rounded">Add</button>
+                      <button onClick={() => setShowAccoladeForm(false)} className="bg-red-400 text-white px-4 py-1 rounded">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowAccoladeForm(true)}
+                    className="bg-yellow-500 text-white px-4 py-1 rounded mt-2"
+                  >
+                    + Add Accolade
+                  </button>
+                )}
             </>
           ) : (
               <>
               <h3 className="text-md font-semibold mb-2">Education</h3>
               <ul>
                 {formData.education.map((edu, i) => (
-                  <li key={i} className="mb-2 border rounded p-2">
-                    <strong>{edu.title}</strong> — {edu.description} <span className="text-xs text-gray-400">{edu.year}</span>
-                  </li>
+                  <li key={i} className="mb-2 border rounded p-2 relative group">
+                  <strong>{edu.title}</strong> — {edu.description} <span className="text-xs text-gray-400">{edu.year}</span>
+                  <button
+                    onClick={() => handleRemoveItem('education', i)}
+                    className="absolute top-2 right-2 text-red-500 hover:text-red-700 hidden group-hover:block"
+                  >
+                    <FaTrash />
+                  </button>
+                </li>                
                 ))}
               </ul>
               {showEduForm ? (
@@ -459,9 +635,15 @@ const Profile = () => {
               <h3 className="text-md font-semibold mb-2 mt-4">Internships</h3>
                 <ul>
                   {formData.internships.map((intern, i) => (
-                    <li key={i} className="mb-2 border rounded p-2">
-                      <strong>{intern.title}</strong> — {intern.description} <span className="text-xs text-gray-400">{intern.year}</span>
-                    </li>
+                    <li key={i} className="mb-2 border rounded p-2 relative group">
+                    <strong>{intern.title}</strong> — {intern.description} <span className="text-xs text-gray-400">{intern.year}</span>
+                    <button
+                      onClick={() => handleRemoveItem('internships', i)}
+                      className="absolute top-2 right-2 text-red-500 hover:text-red-700 hidden group-hover:block"
+                    >
+                      <FaTrash />
+                    </button>
+                  </li>                  
                   ))}
                 </ul>
                 {showInternForm ? (
@@ -513,9 +695,15 @@ const Profile = () => {
               <h3 className="text-md font-semibold mb-2 mt-4">Job Experiences</h3>
               <ul>
                 {formData.jobExperiences.map((job, i) => (
-                  <li key={i} className="mb-2 border rounded p-2">
-                    <strong>{job.title}</strong> — {job.description} <span className="text-xs text-gray-400">{job.year}</span>
-                  </li>
+                  <li key={i} className="mb-2 border rounded p-2 relative group">
+                  <strong>{job.title}</strong> — {job.description} <span className="text-xs text-gray-400">{job.year}</span>
+                  <button
+                    onClick={() => handleRemoveItem('jobExperiences', i)}
+                    className="absolute top-2 right-2 text-red-500 hover:text-red-700 hidden group-hover:block"
+                  >
+                    <FaTrash />
+                  </button>
+                </li>                
                 ))}
               </ul>
               {showJobForm ? (
@@ -567,7 +755,7 @@ const Profile = () => {
                 <ul>
                   {degrees.length > 0 ? (
                     degrees.map((deg) => (
-                      <li key={deg._id} className="mt-2 border p-2 rounded shadow-sm bg-white">
+                      <li key={deg._id} className="mt-2 border p-2 rounded shadow-sm bg-white relative group">
                         <img src={deg.degreeUrl} alt="Degree" className="w-full max-w-xs rounded-md" />
                         <p className="text-gray-600">{deg.description}</p>
                         <p className="text-sm text-gray-500">
@@ -579,6 +767,12 @@ const Profile = () => {
                             {deg.status}
                           </span>
                         </p>
+                        <button
+                          onClick={() => handleDeleteDegree(deg._id)}
+                          className="absolute top-2 right-2 text-red-500 hover:text-red-700 hidden group-hover:block"
+                        >
+                          <FaTrash />
+                        </button>
                       </li>
                     ))
                   ) : (
@@ -597,11 +791,11 @@ const Profile = () => {
               <ul>
                 {certificates.length > 0 ? (
                   certificates.map((cert) => (
-                    <li key={cert._id} className="mt-2 border p-2 rounded shadow-sm bg-white">
+                    <li key={cert._id} className="mt-2 border p-2 rounded shadow-sm bg-white relative group">
                       <img src={cert.certificateUrl} alt="Certificate" className="w-full max-w-xs rounded-md" />
                       <p className="text-gray-600">{cert.description}</p>
                       <p className="text-sm text-gray-500">
-                      Verified by: <span className="font-semibold">{cert.organizationId?.name || "Unknown Organization"}</span>
+                        Verified by: <span className="font-semibold">{cert.organizationId?.name || "Unknown Organization"}</span>
                       </p>
                       <p className="text-sm text-gray-500">
                         Status:{" "}
@@ -609,6 +803,15 @@ const Profile = () => {
                           {cert.status}
                         </span>
                       </p>
+
+                      {/* Trash icon for edit view */}
+                      <button
+                        onClick={() => handleDeleteCertificate(cert._id)}
+                        className="absolute top-2 right-2 text-red-500 hover:text-red-700 hidden group-hover:block"
+                      >
+                        <FaTrash />
+                      </button>
+
                     </li>
                   ))
                 ) : (

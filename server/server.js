@@ -24,10 +24,12 @@ const app = express();
 app.use(
   cors({
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+
+app.options('*', cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -50,7 +52,14 @@ mongoose
     organizationType: { type: String, enum: ["Business", "Education", "Other"], required: true },
     establishedSince: Date,
     numWorkers: Number,
-    accolades: String,
+    accolades: [
+      {
+        title: String,
+        description: String,
+        year: String,
+        photoUrl: String,
+      }
+    ],    
   }, { timestamps: true });
   
   const organizationModel = mongoose.model('Organization', organizationSchema);  
@@ -156,38 +165,35 @@ app.post("/api/respond-degree", async (req, res) => {
 
   try {
     const notification = await Notification.findById(notificationId);
-    if (!notification) {
-      return res.status(404).json({ message: "Notification not found" });
-    }
+    if (!notification) return res.status(404).json({ message: "Notification not found" });
 
-    // ✅ Check that the notification type is 'degree'
-    if (notification.type !== "degree") {
+    if (notification.type !== "degree")
       return res.status(400).json({ message: "Invalid notification type" });
-    }
 
     const degree = await Degree.findById(notification.documentId);
-    if (!degree) {
-      return res.status(404).json({ message: "Degree not found" });
-    }
+    if (!degree) return res.status(404).json({ message: "Degree not found" });
 
     if (response === "accepted") {
       degree.status = "verified";
-      await User.findByIdAndUpdate(degree.userId, {
-        $push: { degrees: degree._id },
-      });
+      await degree.save();
+
+      await User.findByIdAndUpdate(
+        degree.userId,
+        { $addToSet: { degrees: degree._id } },
+        { new: true }
+      );
     } else {
       degree.status = "declined";
+      await degree.save();
     }
-
-    await degree.save();
 
     notification.status = response;
     if (comment) notification.responseComment = comment;
     await notification.save();
 
-    res.status(200).json({ message: `Degree ${response}` });
+    res.status(200).json({ message: `Degree ${response} and notification updated` });
   } catch (error) {
-    console.error("❌ Error in respond-degree:", error.message);
+    console.error("❌ Error in /api/respond-degree:", error.message);
     res.status(500).json({ message: "Error responding to degree", error: error.message });
   }
 });
@@ -202,6 +208,24 @@ app.get("/api/get-user-degrees/:userId", async (req, res) => {
     res.status(200).json(degrees);
   } catch (error) {
     res.status(500).json({ message: "Error fetching degrees", error: error.message });
+  }
+});
+
+app.delete('/api/delete-certificate/:id', async (req, res) => {
+  try {
+    await Certificate.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: "Certificate deleted" });
+  } catch (err) {
+    res.status(500).json({ message: "Error deleting certificate" });
+  }
+});
+
+app.delete('/api/delete-degree/:id', async (req, res) => {
+  try {
+    await Degree.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: "Degree deleted" });
+  } catch (err) {
+    res.status(500).json({ message: "Error deleting degree" });
   }
 });
 
@@ -756,6 +780,7 @@ app.put("/api/profile", upload.single("photo"), async (req, res) => {
       "education",
       "jobExperiences",
       "internships",
+      "accolades",
     ];
 
     fieldsToParse.forEach((field) => {

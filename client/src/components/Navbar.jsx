@@ -14,9 +14,11 @@ const NavBarItem = ({ title, link, classprops }) => (
 );
 
 const Navbar = () => {
-  const { user, logoutUser, loading, unreadMessages } = useUser();
+  const { userProfile, logoutUser, loading, unreadMessages, refetchTrigger } = useUser();
   const [toggleMenu, setToggleMenu] = React.useState(false);
   const navigate = useNavigate();
+
+  React.useEffect(() => {}, [refetchTrigger]);
 
   const handleLogout = () => {
     logoutUser();
@@ -25,7 +27,7 @@ const Navbar = () => {
 
   if (loading) return null;
 
-  const sanitizedPhotoUrl = user?.photoUrl?.replace('http://localhost:8080', 'https://gateway.pinata.cloud/ipfs');
+  const sanitizedPhotoUrl = userProfile?.photoUrl?.replace('http://localhost:8080', 'https://gateway.pinata.cloud/ipfs');
 
   return (
     <nav className="w-full flex md:justify-center justify-between items-center p-4 bg-transparent">
@@ -38,7 +40,7 @@ const Navbar = () => {
         <NavBarItem title="Network" link="/network" />
         <NavBarItem title="Jobs" link="/jobs" />
         <NavBarItem title="Profile" link="/profile" />
-        {user ? (
+        {userProfile ? (
   <div className="flex items-center gap-4">
     {/* Notification bell */}
     <div className="relative cursor-pointer">
@@ -51,21 +53,26 @@ const Navbar = () => {
     </div>
           {/* Profile image and logout dropdown */}
           <div className="relative group">
-            <img
-              src={sanitizedPhotoUrl || defaultUserImage}
-              alt="Profile"
-              onError={(e) => (e.target.src = defaultUserImage)}
-              className="w-10 h-10 rounded-full cursor-pointer object-cover"
-            />
-            <ul className="hidden group-hover:block absolute bg-white shadow-md mt-2 py-2 rounded-md">
+          {/* Profile image trigger */}
+          <img
+            src={sanitizedPhotoUrl || defaultUserImage}
+            alt="Profile"
+            onError={(e) => (e.target.src = defaultUserImage)}
+            className="w-10 h-10 rounded-full cursor-pointer object-cover"
+          />
+
+          {/* BIGGER HOVER AREA */}
+          <div className="absolute top-full right-0 w-32 pt-2 z-50 group-hover:block hidden">
+            <div className="bg-white shadow-md py-2 rounded-md">
               <li
                 onClick={handleLogout}
                 className="cursor-pointer px-4 py-2 hover:bg-gray-100"
               >
                 Logout
               </li>
-            </ul>
+            </div>
           </div>
+        </div>
         </div>
         ) : (
           <Link
@@ -105,7 +112,7 @@ const Navbar = () => {
             <NavBarItem title="Network" link="/network" classprops="my-2 text-lg" />
             <NavBarItem title="Jobs" link="/jobs" classprops="my-2 text-lg" />
             <NavBarItem title="Profile" link="/profile" classprops="my-2 text-lg" />
-            {user ? (
+            {userProfile ? (
               <li
                 onClick={handleLogout}
                 className="cursor-pointer px-4 py-2 bg-[#e6c200] rounded-md text-black hover:bg-[#ffde00] my-2"
