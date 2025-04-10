@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useUser } from "../context/UserContext";
 import { ethers } from "ethers";
-import { useNavigate } from 'react-router-dom';  // <-- Move the import here
+import { useNavigate } from 'react-router-dom'; 
 
 const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
@@ -527,9 +527,7 @@ const Network = () => {
       <p><strong>User:</strong> {notification.userId?.name} ({notification.userId?.email})</p>
       <p><strong>Description:</strong> {notification.documentId?.description}</p>
       {notification.documentId?.certificateUrl && (
-        <a href={notification.documentId.certificateUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500">
-          View Certificate
-        </a>
+        <a href={notification.documentId.certificateUrl} target="_blank" rel="noopener noreferrer" className="inline-block bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-1 px-4 rounded mt-2"> View Certificate </a>      
       )}
       <div className="mt-2">
         <button onClick={() => handleResponse(notification._id, "accepted", "", notification)} className="bg-green-500 text-white py-1 px-3 rounded mr-2">Accept</button>
@@ -546,9 +544,7 @@ const Network = () => {
       <p><strong>User:</strong> {notification.userId?.name} ({notification.userId?.email})</p>
       <p><strong>Description:</strong> {notification.documentId?.description}</p>
       {notification.documentId?.degreeUrl && (
-        <a href={notification.documentId.degreeUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500">
-          View Degree
-        </a>
+        <a href={notification.documentId.degreeUrl} target="_blank" rel="noopener noreferrer" className="inline-block bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-1 px-4 rounded mt-2"> View Degree </a>
       )}
       <div className="mt-2">
         <button onClick={() => handleDegreeResponse(notification._id, "accepted")} className="bg-green-500 text-white py-1 px-3 rounded mr-2">Accept</button>

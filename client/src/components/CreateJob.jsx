@@ -50,7 +50,21 @@ const CreateJob = () => {
           <option value="Hybrid">Hybrid</option>
         </select>
         <input name="pay" placeholder="Pay (e.g., $1000/month)" onChange={handleChange} required className="w-full p-2 border rounded" />
-        <button type="submit" className="bg-yellow-400 hover:bg-yellow-500 py-2 px-4 rounded text-black font-semibold">Post Job</button>
+        <div className="flex justify-between pt-4">
+          <button
+            type="submit"
+            className="bg-yellow-400 hover:bg-yellow-500 py-2 px-6 rounded text-black font-semibold"
+          >
+            Post Job
+          </button>
+          <button
+            type="button"
+            onClick={() => window.history.back()}
+            className="bg-yellow-400 hover:bg-yellow-500 py-2 px-6 rounded text-black font-semibold"
+          >
+            ← Back
+          </button>
+        </div>
       </form>
     </div>
   );

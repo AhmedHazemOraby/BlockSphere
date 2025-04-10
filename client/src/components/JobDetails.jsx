@@ -60,6 +60,25 @@ const JobDetails = () => {
     }
   };
 
+  const handleRemoveApplicant = async (applicantId) => {
+    const confirm = window.confirm("Are you sure you want to remove this applicant?");
+    if (!confirm) return;
+  
+    try {
+      const res = await fetch(`http://localhost:5000/api/jobs/${id}/applicants/${applicantId}`, {
+        method: 'DELETE',
+      });
+  
+      if (!res.ok) throw new Error('Failed to remove applicant.');
+  
+      // Refresh applicants list
+      setApplicants(prev => prev.filter(app => app._id !== applicantId));
+    } catch (err) {
+      console.error(err);
+      alert("Could not remove applicant.");
+    }
+  };
+  
   if (!job) return <p className="p-8">Loading...</p>;
 
   return (
@@ -126,9 +145,18 @@ const JobDetails = () => {
         )}
 
         {role === 'individual' && hasApplied && (
-          <p className="text-green-600 font-medium mt-4">
-            ✅ You’ve already applied to this job.
-          </p>
+           <>
+           <p className="text-green-600 font-medium mt-4">
+             ✅ You’ve already applied to this job.
+           </p>
+       
+           <button
+             onClick={() => window.history.back()}
+             className="mt-6 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-4 py-2 rounded"
+           >
+             ← Back
+           </button>
+         </>
         )}
 
         {/* Organization View: Applicants */}
@@ -144,18 +172,33 @@ const JobDetails = () => {
                     <p className="font-semibold">{app.userId.name}</p>
                     <p className="text-sm text-gray-600">Email: {app.email}</p>
                     <p className="text-sm text-gray-600">Phone: {app.phone}</p>
-                    <a
-                      href={app.resumeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 underline text-sm"
-                    >
-                      View Resume
-                    </a>
+
+                    <div className="flex justify-between items-center mt-4">
+                      <a
+                        href={app.resumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-4 py-2 rounded"
+                      >
+                        View Resume
+                      </a>
+                      <button
+                        onClick={() => handleRemoveApplicant(app._id)} // app._id is Application ID
+                        className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-4 py-2 rounded"
+                      >
+                        Remove Applicant
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
             )}
+            <button
+              onClick={() => window.history.back()}
+              className="mt-6 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-4 py-2 rounded"
+            >
+              ← Back
+            </button>
           </div>
         )}
       </div>

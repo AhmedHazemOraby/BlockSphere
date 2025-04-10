@@ -65,7 +65,7 @@ const JobList = () => {
 
             <Link
               to={`/jobs/${job._id}`}
-              className="text-blue-500 hover:underline text-sm"
+              className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold text-sm px-4 py-1 rounded"
             >
               View Details
             </Link>
