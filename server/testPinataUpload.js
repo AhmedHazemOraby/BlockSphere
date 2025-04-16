@@ -1,10 +1,10 @@
 const fs = require("fs");
 const path = require("path");
-const { uploadToPinata } = require("./utils/pinataClient"); // Make sure this path is correct
+const { uploadToPinata } = require("./utils/pinataClient"); 
 
 const testUpload = async () => {
   try {
-    const filePath = path.join(__dirname, "test-image.png"); // Ensure image exists
+    const filePath = path.join(__dirname, "test-image.png"); 
 
     if (!fs.existsSync(filePath)) {
       throw new Error(`❌ File not found: ${filePath}`);

@@ -18,6 +18,8 @@ import CreateJob from './components/CreateJob';
 import MyJobs from './components/MyJobs';
 import ChatRoom from './components/ChatRoom';
 import UploadDegree from "./components/UploadDegree";
+import PublicProfile from './components/PublicProfile';
+import ProfileView from './components/ProfileView';
 
 const App = () => {
   return (
@@ -41,6 +43,8 @@ const App = () => {
           <Route path="/my-jobs" element={<MyJobs />} />
           <Route path="/chat/:userId" element={<ChatRoom />} />
           <Route path="/upload-degree" element={<UploadDegree />} />
+          <Route path="/profile" element={<ProfileView />} />
+          <Route path="/user/:userId" element={<PublicProfile />} />
         </Routes>
       </div>
       <Footer />

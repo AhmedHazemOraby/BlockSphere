@@ -322,9 +322,8 @@ const Network = () => {
   const [message, setMessage] = useState("");
   const { fetchUserProfile, setRefetchTrigger } = useUser();
 
-  const navigate = useNavigate();  // <-- Move this inside the component
+  const navigate = useNavigate();
 
-  // Early return: Check if the user data is not available
   if (!user || !user._id) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -336,7 +335,6 @@ const Network = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Fetch friend list and requests
     fetch(`http://localhost:5000/api/network-users/${user._id}`)
       .then(res => res.json())
       .then(data => {
@@ -345,7 +343,6 @@ const Network = () => {
       })
       .catch(err => console.error("Failed to fetch users:", err));
 
-    // Fetch org certificate notifications
     if (user.role === "organization") {
       fetch(`http://localhost:5000/api/get-organization-notifications/${user._id}`)
       .then(res => res.json())
@@ -464,7 +461,7 @@ const Network = () => {
       const updated = await res.json();
 
       if (res.ok) {
-        setRequests((prev) => prev.filter((r) => r._id !== requestId)); // Remove processed request
+        setRequests((prev) => prev.filter((r) => r._id !== requestId));
 
         if (status === "accepted") {
           const otherUserId = updated.sender === user._id ? updated.receiver : updated.sender;
@@ -562,7 +559,7 @@ const Network = () => {
           <h2 className="text-2xl font-semibold mb-4">Users</h2>
           {allUsers.length ? (
             allUsers
-              .filter((u) => !user.connections.includes(u._id)) // Hide connections from the user list
+              .filter((u) => !user.connections.includes(u._id))
               .map((u) => {
                 const { status, requestId } = getFriendRequestStatus(u._id);
                 return (
@@ -571,9 +568,12 @@ const Network = () => {
                     className="flex justify-between items-center bg-white p-4 mb-2 rounded shadow"
                   >
                     <div>
-                      <p className="font-semibold">
-                        {u.name} ({u.email})
-                      </p>
+                    <p>
+                      <span className="font-semibold text-blue-600 hover:underline cursor-pointer"
+                        onClick={() => navigate(`/user/${u._id}`)}>
+                        {u.name}
+                      </span> ({u.email})
+                    </p>
                     </div>
                     <div>
                       {status === "pending" ? (
@@ -599,7 +599,6 @@ const Network = () => {
                           </button>
                         </>
                       ) : (
-                        // Use isConnected to check if the user is already connected
                         !isConnected(u._id) ? (
                           <button
                             onClick={() => handleConnect(u._id)}
@@ -608,7 +607,7 @@ const Network = () => {
                             Connect
                           </button>
                         ) : (
-                          <span className="text-green-500">Connected</span> // You can customize this text or button.
+                          <span className="text-green-500">Connected</span>
                         )
                       )}
                     </div>
@@ -633,9 +632,14 @@ const Network = () => {
                   className="flex justify-between items-center bg-white p-4 mb-2 rounded shadow"
                 >
                   <p className="text-lg">
-                    {u.name} ({u.email})
+                    <span
+                      className="text-blue-600 hover:underline cursor-pointer"
+                      onClick={() => navigate(`/user/${u._id}`)}
+                    >
+                      {u.name}
+                    </span> ({u.email})
                   </p>
-                  <button onClick={() => navigate(`/chat/${u._id}`)} // Navigate to the chat room of the user
+                  <button onClick={() => navigate(`/chat/${u._id}`)}
                   className="bg-blue-500 text-white px-3 py-1 rounded">Chat</button>
                 </div>
               ))

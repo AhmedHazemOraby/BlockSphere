@@ -60,7 +60,6 @@ export const UserProvider = ({ children }) => {
     }
   }, [user]);
 
-  // Function to register user or organization
   const registerUser = async (data) => {
     try {
       const response = await fetch('http://localhost:5000/api/register', {
@@ -93,7 +92,7 @@ export const UserProvider = ({ children }) => {
       body: formData,
     });
     const data = await response.json();
-    return data.url; // IPFS URL
+    return data.url;
   };
 
   const applyToJob = async (jobId, resumeUrl, email, phone) => {
@@ -215,21 +214,19 @@ export const UserProvider = ({ children }) => {
     }
 };
 
-  // Example of how to correctly fetch the profile data using the email from the user context:
-
   useEffect(() => {
     if (user) {
-      fetchUserProfile(); // Fetch profile after the user is set
+      fetchUserProfile(); 
     } else {
-      setLoading(false); // If no user, stop loading
+      setLoading(false);
     }
-  }, [user]); // Depend on user only  
+  }, [user]); 
   
   const fetchUserProfile = async () => {
     if (user && user.email) {
       console.log("Fetching profile for:", user.email);
-      setLoading(true); // Ensure loading is set to true
-      const email = encodeURIComponent(user.email); // Ensure email is properly encoded
+      setLoading(true); 
+      const email = encodeURIComponent(user.email);
       try {
         const res = await fetch(`http://localhost:5000/api/profile?email=${email}`);
         if (!res.ok) {
@@ -246,10 +243,10 @@ export const UserProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('Error fetching profile:', error.message);
-        setError(error.message); // Set error if there is one
+        setError(error.message); 
       } finally {
-        setLoading(false); // Set loading to false after the fetch is done
-        console.log("Loading state:", loading); // Log the loading state
+        setLoading(false); 
+        console.log("Loading state:", loading); 
       }
     }
   }; 
@@ -265,7 +262,6 @@ export const UserProvider = ({ children }) => {
     }
   }, [user, role]);
 
-  // Function to logout user
   const logoutUser = () => {
     setUser(null);
     setUserProfile(null);

@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useUser } from '../context/UserContext';
 import { Link } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 
 const JobList = () => {
   const [jobs, setJobs] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const { role } = useUser();
+  const navigate = useNavigate();
+  const { user, role } = useUser();
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -58,8 +59,21 @@ const JobList = () => {
             <p className="text-gray-700 mb-2">{job.description}</p>
 
             {job.organizationId?.name && (
-              <p className="text-sm text-gray-500 mb-1">
-                Posted by: {job.organizationId.name}
+              <p className="text-sm text-gray-700 mb-1">
+                Posted by:{" "}
+                <span
+                  className="text-blue-600 hover:underline cursor-pointer"
+                  onClick={() => {
+                    const orgId = job.organizationId._id || job.organizationId;
+                    if (orgId === user?._id) {
+                      navigate("/profile");
+                    } else {
+                      navigate(`/user/${orgId}`);
+                    }
+                  }}
+                >
+                  {job.organizationId.name}
+                </span>
               </p>
             )}
 

@@ -51,7 +51,7 @@ const ProfileSetup = () => {
       formData.append("name", name);
       formData.append("email", email);
       formData.append("password", password);
-      formData.append("walletAddress", walletAddress); // ✅ Include wallet address
+      formData.append("walletAddress", walletAddress);
       formData.append("role", isOrganization ? "organization" : "individual");
 
       if (photo) {

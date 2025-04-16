@@ -24,7 +24,7 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   console.log(`💰 Deployer Address: ${deployer.address}`);
 
-  const CertificatePayment = await ethers.getContractFactory("CertificatePayment"); // ✅ updated
+  const CertificatePayment = await ethers.getContractFactory("CertificatePayment"); 
   console.log("🚀 Deploying CertificatePayment contract on Local Hardhat Node...");
 
   const contract = await CertificatePayment.deploy();

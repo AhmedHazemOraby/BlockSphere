@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
+import { useNavigate } from 'react-router-dom';
 
 const JobDetails = () => {
   const { id } = useParams();
   const { uploadResumeToIPFS, applyToJob, user, role } = useUser();
-
+  const navigate = useNavigate();
   const [job, setJob] = useState(null);
   const [resume, setResume] = useState(null);
   const [email, setEmail] = useState('');
@@ -71,7 +72,6 @@ const JobDetails = () => {
   
       if (!res.ok) throw new Error('Failed to remove applicant.');
   
-      // Refresh applicants list
       setApplicants(prev => prev.filter(app => app._id !== applicantId));
     } catch (err) {
       console.error(err);
@@ -169,7 +169,14 @@ const JobDetails = () => {
               <ul className="space-y-4">
                 {applicants.map((app) => (
                   <li key={app._id} className="border p-4 rounded bg-gray-50 shadow">
-                    <p className="font-semibold">{app.userId.name}</p>
+                    <p className="text-lg font-semibold text-gray-800">
+                      <span
+                        className="text-blue-600 hover:underline cursor-pointer"
+                        onClick={() => navigate(`/user/${app.userId?._id}`)}
+                      >
+                        {app.userId?.name}
+                      </span>
+                    </p>
                     <p className="text-sm text-gray-600">Email: {app.email}</p>
                     <p className="text-sm text-gray-600">Phone: {app.phone}</p>
 
@@ -183,7 +190,7 @@ const JobDetails = () => {
                         View Resume
                       </a>
                       <button
-                        onClick={() => handleRemoveApplicant(app._id)} // app._id is Application ID
+                        onClick={() => handleRemoveApplicant(app._id)}
                         className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-4 py-2 rounded"
                       >
                         Remove Applicant

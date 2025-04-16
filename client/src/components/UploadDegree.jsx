@@ -396,7 +396,7 @@ const UploadDegree = () => {
       ];
 
       const contract = new ethers.Contract(contractAddress, abi, signer);
-      console.log("Uploading with IPFS URL:", uploadedDegree.degreeUrl); // Debug
+      console.log("Uploading with IPFS URL:", uploadedDegree.degreeUrl);
       const ipfsHash = uploadedDegree.degreeUrl || uploadedDegree.fileUrl || uploadedDegree.ipfsHash;
 
       if (!ipfsHash) {
@@ -413,7 +413,6 @@ const UploadDegree = () => {
 
       let contractDegreeId = null;
 
-// Use filter from the contract to get CertificateUploaded logs
       const filter = contract.filters.CertificateUploaded();
       const fromBlock = Math.max(receipt.blockNumber - 5, 0);
 const toBlock = receipt.blockNumber + 5;

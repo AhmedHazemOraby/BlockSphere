@@ -26,7 +26,7 @@ contract CertificatePayment {
         owner = msg.sender;
     }
 
-    // ✅ Users Upload Certificate with Payment
+    // Users Upload Certificate with Payment
     function uploadCertificate(address _organization, string memory _ipfsHash) external payable {
         require(msg.value > 0, "Payment required");
 
@@ -45,7 +45,7 @@ contract CertificatePayment {
         emit CertificateUploaded(certificateCount, msg.sender, _organization, _ipfsHash, msg.value);
     }
 
-    // ✅ Organization Verifies or Rejects Certificate
+    // Organization Verifies or Rejects Certificate
     function verifyCertificate(uint256 _id, bool _accepted, string memory _comment) external {
         Certificate storage cert = certificates[_id];
         require(msg.sender == cert.organization, "Only organization can verify");
@@ -54,14 +54,14 @@ contract CertificatePayment {
         require(address(this).balance >= cert.fee, "Not enough ETH in contract");
 
         if (_accepted) {
-            // ✅ Transfer funds to the organization
+            // Transfer funds to the organization
             (bool success, ) = payable(cert.organization).call{value: cert.fee}("");
             require(success, "Payment to organization failed");
             
             emit PaymentTransferred(_id, cert.organization, cert.fee);
             cert.verified = true;
         } else {
-            // ✅ Refund user if certificate is rejected
+            // Refund user if certificate is rejected
             (bool refunded, ) = payable(cert.user).call{value: cert.fee}("");
             require(refunded, "Refund to user failed");
 
@@ -73,12 +73,12 @@ contract CertificatePayment {
         emit CertificateVerified(_id, _accepted, _comment);
     }
 
-    // ✅ Check contract balance
+    // Check contract balance
     function getContractBalance() public view returns (uint256) {
         return address(this).balance;
     }
 
-    // ✅ Get Certificate Details
+    // Get Certificate Details
     function getCertificate(uint256 _id) public view returns (
         uint256 id,
         address user,

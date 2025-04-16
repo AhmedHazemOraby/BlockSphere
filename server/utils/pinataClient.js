@@ -1,7 +1,6 @@
 const axios = require("axios");
 const FormData = require("form-data");
 
-// Pinata API credentials
 const pinataApiKey = "cf0092476fb94cd972ba";
 const pinataSecretApiKey = "45e9948b51b80dd4df00ff4fd3147389bc7613fdff83acbc789542eb55526008";
 

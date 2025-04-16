@@ -58,7 +58,7 @@ const Profile = () => {
   }
 }, [userProfile]);
   
-  // ✅ Function to fetch verified certificates
+  // Function to fetch verified certificates
   const fetchVerifiedCertificates = async (userProfileId) => {
     try {
       const response = await fetch(`http://localhost:5000/api/get-user-certificates/${userProfileId}`);  
@@ -176,7 +176,7 @@ const Profile = () => {
     if (!response.ok) throw new Error("Failed to upload photo");
   
     const data = await response.json();
-    return data.url; // ✅ IPFS URL from server
+    return data.url;
   };  
 
   const handleSave = async () => {
@@ -191,7 +191,7 @@ const Profile = () => {
       payload.append("establishedSince", formData.establishedSince || "");
       payload.append("numWorkers", formData.numWorkers || "");
       payload.append("accolades", JSON.stringify(formData.accolades || []));
-      payload.append("photoUrl", photoUrl); // ✅ Add this explicitly
+      payload.append("photoUrl", photoUrl);
   
       payload.append("education", JSON.stringify(formData.education));
       payload.append("jobExperiences", JSON.stringify(formData.jobExperiences));
@@ -203,7 +203,7 @@ const Profile = () => {
       }
   
       if (formData.photo) {
-        payload.append("photo", formData.photo); // still send the file
+        payload.append("photo", formData.photo);
       }
   
       const response = await fetch("http://localhost:5000/api/profile", {

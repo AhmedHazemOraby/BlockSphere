@@ -9,7 +9,7 @@ const UploadCertificate = () => {
   const [organizationType, setOrganizationType] = useState("");
   const [organizations, setOrganizations] = useState([]);
   const [selectedOrganization, setSelectedOrganization] = useState("");
-  const [organizationWallet, setOrganizationWallet] = useState(""); // ✅ Store the selected org's wallet
+  const [organizationWallet, setOrganizationWallet] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [uploadedCertificate, setUploadedCertificate] = useState(null);
@@ -19,14 +19,14 @@ const UploadCertificate = () => {
     if (organizationType) {
         fetch(`http://localhost:5000/api/get-organizations?type=${organizationType}`)
             .then((res) => {
-                console.log("📡 API Response Status:", res.status); // ✅ Debug
-                return res.text(); // Read raw response first
+                console.log("📡 API Response Status:", res.status); 
+                return res.text();
             })
             .then((data) => {
-                console.log("📜 Raw API Response:", data); // ✅ Debug raw response
+                console.log("📜 Raw API Response:", data);
 
                 try {
-                    const jsonData = JSON.parse(data); // Try parsing JSON
+                    const jsonData = JSON.parse(data);
                     if (Array.isArray(jsonData)) {
                         setOrganizations(jsonData);
                     } else {
@@ -46,7 +46,7 @@ const UploadCertificate = () => {
     }
 }, [organizationType]);    
 
-  // ✅ Fetch selected organization's wallet address
+  // Fetch selected organization's wallet address
   useEffect(() => {
     if (selectedOrganization) {
       fetch(`http://localhost:5000/api/get-organization-wallet/${selectedOrganization}`)
@@ -57,7 +57,7 @@ const UploadCertificate = () => {
             throw new Error(`HTTP error! Status: ${res.status}`);
           }
           
-          return res.json(); // Ensure JSON parsing happens only when response is valid
+          return res.json();
         })
         .then((data) => {
           console.log("✅ Organization Wallet Data:", data);
@@ -65,7 +65,7 @@ const UploadCertificate = () => {
         })
         .catch((err) => {
           console.error("❌ Error fetching organization wallet:", err);
-          setOrganizationWallet(""); // Reset wallet to avoid undefined errors
+          setOrganizationWallet("");
         });
     } else {
       setOrganizationWallet("");
@@ -122,8 +122,7 @@ const UploadCertificate = () => {
   console.log("✅ Certificate URL:", uploadedCertificate?.certificateUrl);
   console.log("✅ Organization Wallet:", organizationWallet);  
 
-  const [paying, setPaying] = useState(false); // Track payment process
-
+  const [paying, setPaying] = useState(false); 
   const handlePayFee = async () => {
     if (!window.ethereum) {
       setMessage("MetaMask is not installed.");
@@ -144,7 +143,7 @@ const UploadCertificate = () => {
       setPaying(true); // Disable button
       await window.ethereum.request({ method: "eth_requestAccounts" });
 
-      const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; //"0xAbf4f0FA104e6dF73bDC6f2177503dC56B5aB071"; 
+      const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; 
       const abi = [
         {
           "inputs": [],
@@ -479,7 +478,6 @@ let contractCertificateId = null;
 
 for (const log of receipt.logs) {
   try {
-    // Ensure the log is from our contract
     if (log.address.toLowerCase() !== contractAddress.toLowerCase()) continue;
 
     const parsedLog = iface.parseLog(log);
@@ -487,7 +485,7 @@ for (const log of receipt.logs) {
 
     if (parsedLog.name === "CertificateUploaded") {
       console.log("✅ Found CertificateUploaded event:", parsedLog.args);
-      contractCertificateId = Number(parsedLog.args.id); // or parsedLog.args[0]
+      contractCertificateId = Number(parsedLog.args.id);
       break;
     }
   } catch (err) {
@@ -507,7 +505,7 @@ if (contractCertificateId === null) {
 
       console.log("✅ Extracted contract ID:", contractCertificateId);
 
-      // ✅ Store transaction hash + contractId in backend
+      // Store transaction hash + contractId in backend
       await fetch("http://localhost:5000/api/pay-certificate-fee", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -607,7 +605,7 @@ if (contractCertificateId === null) {
             className={`bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 mt-2 ${
               paying ? "opacity-50 cursor-not-allowed" : ""
             }`}
-            disabled={paying} // Disable button while paying
+            disabled={paying}
           >
             {paying ? "Processing Payment..." : "Pay Fee (0.001 ETH)"}
           </button>

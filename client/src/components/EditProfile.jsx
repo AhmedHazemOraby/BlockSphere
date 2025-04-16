@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
-import defaultUserImage from '../../images/defaultUserImage.png';
 
 const EditProfile = () => {
   const { user, updateUserProfile } = useUser();
@@ -58,7 +57,6 @@ const EditProfile = () => {
       await updateUserProfile(updatedData);
       alert("Profile updated successfully!");
 
-      // ✅ Ensure profile page updates
       navigate("/profile");
       window.location.reload();
     } catch (error) {

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useUser } from "../context/UserContext";
+import { useNavigate } from "react-router-dom";
+import defaultUserImage from "../../images/defaultUserImage.png";
 
 const Home = () => {
   const { user } = useUser();
@@ -8,10 +10,11 @@ const Home = () => {
   const [newPost, setNewPost] = useState("");
   const [newImage, setNewImage] = useState(null);
   const [commentTexts, setCommentTexts] = useState({});
+  const navigate = useNavigate();
 
   const API_BASE_URL = "http://localhost:5000/api/posts";
 
-  // ✅ Fetch all posts
+  // Fetch all posts
   useEffect(() => {
     const fetchPosts = async () => {
       setLoading(true);
@@ -30,15 +33,16 @@ const Home = () => {
     fetchPosts();
   }, []);
 
-  // ✅ Handle post submission
+  // Handle post submission
   const handlePostSubmit = async () => {
     if (!newPost.trim()) return alert("Post content cannot be empty.");
     if (!user) return alert("You must be logged in to create a post.");
 
     const formData = new FormData();
+    formData.append("userId", JSON.stringify({ _id: user._id, name: user.name }));
+    formData.append("role", user.role);
     formData.append("content", newPost);
-    formData.append("user", user.name);
-    formData.append("userPhoto", user.photoUrl || ""); // Store user profile picture
+    formData.append("userPhoto", user.photoUrl || "");
     if (newImage) formData.append("image", newImage);
 
     try {
@@ -63,7 +67,7 @@ const Home = () => {
     }
   };
 
-  // ✅ Handle Like Toggle
+  // Handle Likes
   const handleLike = async (postId) => {
     try {
       const response = await fetch(`${API_BASE_URL}/${postId}/like`, {
@@ -81,7 +85,7 @@ const Home = () => {
     }
   };
 
-  // ✅ Handle Comment Submission
+  // Handle Comment Submission
   const handleComment = async (postId) => {
     if (!commentTexts[postId]?.trim()) return;
 
@@ -89,7 +93,11 @@ const Home = () => {
       const response = await fetch(`${API_BASE_URL}/${postId}/comment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: user.name, text: commentTexts[postId] }),
+        body: JSON.stringify({
+          username: user.name,
+          userId: user._id,
+          text: commentTexts[postId],
+        }),        
       });
 
       if (response.ok) {
@@ -140,7 +148,12 @@ const Home = () => {
                 <div className="flex items-center mb-4">
                   <div className="flex-shrink-0">
                     {post.userPhoto ? (
-                      <img src={post.userPhoto} alt={post.user} className="w-10 h-10 rounded-full" />
+                      <img
+                      src={post.userPhoto || defaultUserImage}
+                      alt="Profile"
+                      onError={(e) => (e.target.src = defaultUserImage)}
+                      className="w-10 h-10 rounded-full"
+                      />                    
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white">
                         {post.user.charAt(0).toUpperCase()}
@@ -148,11 +161,36 @@ const Home = () => {
                     )}
                   </div>
                   <div className="ml-3">
-                    <h2 className="text-lg font-semibold">{post.user}</h2>
+                  {console.log("Post:", post)}
+                  {(post.userId || post.user) ? (
+                  <h2
+                  className="text-lg font-semibold text-blue-600 cursor-pointer hover:underline"
+                  onClick={() => {
+                    const authorId = post.userId?._id || post.userId;
+                
+                    if (authorId) {
+                      if (authorId === user?._id) {
+                        navigate("/profile");
+                      } else {
+                        navigate(`/user/${authorId}`);
+                      }
+                    } else {
+                      if (post.userRole === "organization") {
+                        navigate(`/organization/name/${post.user}`);
+                      } else {
+                        navigate(`/user/name/${post.user}`);
+                      }
+                    }
+                  }}
+                >
+                  {post.userId?.name || post.user || "Unknown"}
+                </h2>                
+                ) : (
+                  <span className="text-lg font-semibold text-gray-600">Unknown</span>
+                )}
                     <p className="text-sm text-gray-500">{new Date(post.createdAt).toLocaleString()}</p>
                   </div>
                 </div>
-
                 {/* Post Content */}
                 <p className="text-gray-800 mb-4">{post.content}</p>
                 {post.image && (
@@ -179,13 +217,32 @@ const Home = () => {
 
                 {/* Comment Section */}
                 <div className="mt-4">
-                  {post.comments?.map((comment, index) => (
-                    <div key={index} className="p-2 bg-gray-100 rounded-lg my-1">
-                      <strong className="text-gray-800">{comment.user || "Anonymous"}</strong>: {comment.text}
-                    </div>
-                  ))}
-                </div>
+                {post.comments?.map((comment, index) => (
+                <div key={index} className="p-2 bg-gray-100 rounded-lg my-1">
+                  {(comment?.userId || comment?.user) ? (
+                  <strong
+                    className="text-blue-600 cursor-pointer hover:underline"
+                    onClick={() => {
+                      const commentUserId = comment.userId?._id || comment.userId;
 
+                      if (!commentUserId) return;
+
+                      if (commentUserId === user?._id) {
+                        navigate("/profile");
+                      } else {
+                        navigate(`/user/${commentUserId}`);
+                      }
+                    }}
+                  >
+                    {comment.userId?.name || comment.user || "Unknown"}
+                  </strong>
+                ) : (
+                  <span className="text-gray-500">Unknown</span>
+                )}
+                  : {comment.text}
+                </div>
+              ))}
+                </div>
                 {/* Add Comment Input */}
                 <div className="mt-3 flex">
                   <input

@@ -22,9 +22,9 @@ module.exports = {
   networks: {
     hardhat: {
       chainId: 31337,
-    }, // ✅ Enables local Hardhat network
+    },
     localhost: {
-      url: "http://127.0.0.1:8545", // ✅ Connects to Hardhat node
+      url: "http://127.0.0.1:8545",
     },
   },
 };

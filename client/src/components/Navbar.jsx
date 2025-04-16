@@ -22,7 +22,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     logoutUser();
-    navigate('/login'); // Redirect to login page
+    navigate('/login');
   };
 
   if (loading) return null;

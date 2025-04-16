@@ -13,14 +13,10 @@ const Application = require('./applicationModel');
 const FriendRequest = require("./FriendRequest");
 const Message = require("./Message");
 const Degree = require("./degreeModel");
-
-// Import postRoutes
 const postRoutes = require('./postRoutes');
 const { uploadToPinata } = require('./utils/pinataClient');
-
 const app = express();
 
-// Middleware
 app.use(
   cors({
     origin: '*',
@@ -34,38 +30,17 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Multer Configuration
 const upload = multer({ storage: multer.memoryStorage() });
 
-// MongoDB Connection
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected successfully'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-  const organizationSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    email: { type: String, unique: true, required: true },
-    password: { type: String, required: true },
-    photoUrl: { type: String },
-    walletAddress: { type: String, unique: true, required: true },
-    organizationType: { type: String, enum: ["Business", "Education", "Other"], required: true },
-    establishedSince: Date,
-    numWorkers: Number,
-    accolades: [
-      {
-        title: String,
-        description: String,
-        year: String,
-        photoUrl: String,
-      }
-    ],    
-  }, { timestamps: true });
-  
-  const organizationModel = mongoose.model('Organization', organizationSchema);  
-  const Certificate = require("./certificateModel"); // Import certificate model
+  const organizationModel = require("./OrganizationModel");
+ 
+  const Certificate = require("./certificateModel");
 
-// Endpoint: Upload Certificate (Pending)
 app.post("/api/upload-certificate", upload.single("certificate"), async (req, res) => {
   const { userId, organizationId, description } = req.body;
 
@@ -78,11 +53,9 @@ app.post("/api/upload-certificate", upload.single("certificate"), async (req, re
       return res.status(400).json({ message: "⚠️ Missing required fields" });
     }
 
-    // ✅ Upload certificate to Pinata
     const ipfsUrl = await uploadToPinata(req.file.buffer, req.file.originalname);
     console.log("✅ Uploaded to IPFS:", ipfsUrl);
 
-    // ✅ Store certificate as "unpaid"
     const newCertificate = new Certificate({
       userId,
       organizationId,
@@ -234,7 +207,7 @@ app.delete('/api/jobs/:jobId/applicants/:applicantId', async (req, res) => {
 
   try {
     const application = await Application.findOneAndDelete({
-      _id: applicantId,  // ✅ Not userId
+      _id: applicantId, 
       jobId,
     });
 
@@ -249,7 +222,6 @@ app.delete('/api/jobs/:jobId/applicants/:applicantId', async (req, res) => {
   }
 });
 
-// Send friend request
 app.post("/api/friend-request", async (req, res) => {
   const { senderId, receiverId } = req.body;
 
@@ -260,7 +232,6 @@ app.post("/api/friend-request", async (req, res) => {
     return res.status(404).json({ message: "User(s) not found" });
   }
 
-  // 👇 Prevent organizations from sending/receiving
   if (sender.role === "organization" || receiver.role === "organization") {
     return res.status(403).json({ message: "Organizations can't send or receive requests" });
   }
@@ -272,7 +243,6 @@ app.post("/api/friend-request", async (req, res) => {
   res.status(201).json(request);
 });
 
-// Accept or decline request
 app.post("/api/friend-request/respond", async (req, res) => {
   const { requestId, status } = req.body;
 
@@ -293,7 +263,6 @@ app.post("/api/friend-request/respond", async (req, res) => {
     console.log("✅ Friend request:", request);
 
     if (status === "accepted") {
-      // 🧠 Defensive: make sure request.sender and request.receiver are valid
       if (!request.sender || !request.receiver) {
         return res.status(400).json({ message: "Missing sender or receiver in request" });
       }
@@ -314,7 +283,6 @@ app.post("/api/friend-request/respond", async (req, res) => {
   }
 });
 
-// Get all users and their friend request status
 app.get("/api/network-users/:userId", async (req, res) => {
   const { userId } = req.params;
 
@@ -334,7 +302,6 @@ app.get("/api/get-organization-wallet/:id", async (req, res) => {
   try {
     console.log("🔍 Fetching wallet for organization ID:", req.params.id);
 
-    // Use `organizationModel` instead of `Organization`
     const organization = await organizationModel.findById(req.params.id);
 
     if (!organization) {
@@ -349,7 +316,6 @@ app.get("/api/get-organization-wallet/:id", async (req, res) => {
   }
 });
 
-// ✅ Get all certificates for a user (not just verified)
 app.get("/api/get-user-certificates/:userId", async (req, res) => {
   try {
     const certificates = await Certificate.find({
@@ -413,7 +379,6 @@ app.get('/api/jobs/:jobId/applicants', async (req, res) => {
   }
 });
 
-// Apply to job
 app.post('/api/jobs/:id/apply', async (req, res) => {
   const { userId, resumeUrl, email, phone } = req.body;
 
@@ -437,7 +402,6 @@ app.post('/api/jobs/:id/apply', async (req, res) => {
   }
 });
 
-// Org's own jobs
 app.get('/api/my-jobs/:orgId', async (req, res) => {
   try {
     const jobs = await Job.find({ organizationId: req.params.orgId });
@@ -452,14 +416,12 @@ app.get("/api/get-organization-notifications/:organizationId", async (req, res) 
     const orgId = req.params.organizationId;
     console.log("📥 Incoming notification request for org:", orgId);
 
-    // 🔍 Check if organization exists
     const organization = await organizationModel.findById(orgId);
     if (!organization) {
       console.warn("❌ Organization not found for ID:", orgId);
       return res.status(404).json({ message: "Organization not found" });
     }
 
-    // 📦 Fetch all 'pending' notifications for the organization
     const allNotifications = await Notification.find({
       organizationId: orgId,
       status: "pending",
@@ -471,7 +433,6 @@ app.get("/api/get-organization-notifications/:organizationId", async (req, res) 
       console.info("ℹ️ No pending notifications for org:", orgId);
     }
 
-    // 🧹 Filter certificates and degrees with safe fallback
     const certificates = allNotifications.filter(n => (n.type || "").toLowerCase() === "certificate");
     const degrees = allNotifications.filter(n => (n.type || "").toLowerCase() === "degree" &&
     n.documentId);
@@ -495,12 +456,10 @@ app.post("/api/respond-certificate", async (req, res) => {
       return res.status(404).json({ message: "Notification not found" });
     }
 
-    // Update the notification status and response
-    notification.status = response; // "accepted" or "declined"
+    notification.status = response;
     if (comment) notification.responseComment = comment;
     await notification.save();
 
-    // ✅ Update certificate status
     const certificate = await Certificate.findById(notification.documentId);
     if (!certificate) {
       return res.status(404).json({ message: "Certificate not found" });
@@ -509,7 +468,6 @@ app.post("/api/respond-certificate", async (req, res) => {
     if (response === "accepted") {
       certificate.status = "verified";
 
-      // ✅ Add to user's profile
       await User.findByIdAndUpdate(
         certificate.userId,
         { $push: { certificates: certificate._id } },
@@ -540,7 +498,7 @@ app.get("/api/degrees/:id", async (req, res) => {
 
 app.get("/api/get-organizations", async (req, res) => {
   const { type } = req.query;
-  console.log("🔍 Requested Organization Type:", type); // ✅ Debug
+  console.log("🔍 Requested Organization Type:", type);
 
   try {
       if (!type) {
@@ -550,11 +508,11 @@ app.get("/api/get-organizations", async (req, res) => {
 
       const organizations = await organizationModel.find({ organizationType: type });
 
-      console.log("✅ Fetched Organizations:", organizations); // ✅ Debug
+      console.log("✅ Fetched Organizations:", organizations); 
 
       if (!organizations.length) {
           console.warn("⚠️ Warning: No organizations found for type:", type);
-          return res.status(200).json([]); // Return an empty array instead of 404
+          return res.status(200).json([]);
       }
 
       res.status(200).json(organizations);
@@ -564,7 +522,6 @@ app.get("/api/get-organizations", async (req, res) => {
   }
 });
 
-// Endpoint: Fetch Verified Certificates
 app.get("/api/get-verified-certificates/:userId", async (req, res) => {
   try {
     const certificates = await Certificate.find({
@@ -578,19 +535,16 @@ app.get("/api/get-verified-certificates/:userId", async (req, res) => {
   }
 });
 
-// Endpoint: Store Payment Transaction Hash
 app.post("/api/pay-certificate-fee", async (req, res) => {
   const { certificateId, transactionHash, contractId } = req.body;
 
   try {
     console.log("📥 Incoming payment payload:", req.body);
 
-    // 🔒 Validate required fields
     if (!certificateId || !transactionHash || contractId === undefined) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // 🔄 Update certificate in DB
     const updatedCertificate = await Certificate.findByIdAndUpdate(
       certificateId,
       {
@@ -608,12 +562,10 @@ app.post("/api/pay-certificate-fee", async (req, res) => {
 
     console.log("📄 Certificate after update:", updatedCertificate);
 
-    // 🛡️ Defensive check
     if (!updatedCertificate.organizationId || !updatedCertificate.userId) {
       return res.status(400).json({ message: "Missing organization or user ID in certificate" });
     }
 
-    // 🔔 Create notification (capitalize type to match schema!)
     const newNotification = new Notification({
       organizationId: updatedCertificate.organizationId,
       userId: updatedCertificate.userId,
@@ -626,7 +578,6 @@ app.post("/api/pay-certificate-fee", async (req, res) => {
 
     console.log("✅ Notification saved to DB:", saved);
 
-    // 🎯 Success
     res.status(200).json({
       message: "✅ Payment recorded and certificate is now pending verification.",
       certificate: updatedCertificate,
@@ -641,8 +592,6 @@ app.post("/api/pay-certificate-fee", async (req, res) => {
   }
 });
 
-// Routes
-// User and Organization Registration
 app.post("/api/register", upload.single("photo"), async (req, res) => {
   const { name, email, password, role, organizationType, walletAddress } = req.body;
 
@@ -680,11 +629,11 @@ app.post('/api/login-metamask', async (req, res) => {
 
   try {
     let account = await User.findOne({ walletAddress });
-    let role = "individual"; // Default role
+    let role = "individual";
 
     if (!account) {
       account = await organizationModel.findOne({ walletAddress });
-      role = "organization"; // Set role if found in organizations
+      role = "organization";
     }
 
     if (!account) {
@@ -705,7 +654,6 @@ app.post('/api/login-metamask', async (req, res) => {
   }
 });
 
-// User and Organization Login
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -740,26 +688,21 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Fetch User or Organization Profile
-// server.js
-
 app.get("/api/profile", async (req, res) => {
-  const { email } = req.query;  // Ensure the email query parameter is received
-  console.log("Received email:", email);  // Add this to debug and ensure email is being passed
+  const { email } = req.query;  
+  console.log("Received email:", email); 
 
   if (!email) {
     return res.status(400).json({ message: "Email is required" });
   }
 
   try {
-    // Look for the user by email
     let profile = await User.findOne({ email }).populate("connections", "name email");
     let role = "individual";
 
     if (!profile) {
-      // Check if the profile belongs to an organization
       profile = await organizationModel.findOne({ email });
-      role = "organization";  // Set the role to "organization" if it's an org profile
+      role = "organization";
     }
 
     if (!profile) {
@@ -783,17 +726,14 @@ app.put("/api/profile", upload.single("photo"), async (req, res) => {
   try {
     let updateData = { ...req.body };
 
-    // ✅ Handle uploaded profile photo
     if (req.file) {
       const photoUrl = await uploadToPinata(req.file.buffer, req.file.originalname);
       updateData.photoUrl = photoUrl;
     }
 
-    // 🚫 Clean up unneeded fields
     delete updateData.role;
     delete updateData.photo;
 
-    // ✅ Convert stringified structured fields back to arrays of objects
     const fieldsToParse = [
       "degrees",
       "certifications",
@@ -819,7 +759,6 @@ app.put("/api/profile", upload.single("photo"), async (req, res) => {
       }
     });    
 
-    // ✅ Update depending on role
     let updatedProfile;
     if (role === "organization") {
       updatedProfile = await organizationModel.findOneAndUpdate(
@@ -846,7 +785,6 @@ app.put("/api/profile", upload.single("photo"), async (req, res) => {
   }
 });
 
-// Fetch all users except the current one
 app.get("/api/users", async (req, res) => {
   const currentUserId = req.query.currentUserId;
 
@@ -863,7 +801,6 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-// Save messages
 app.post("/api/messages", async (req, res) => {
   try {
     const { sender, receiver, content, type } = req.body;
@@ -897,7 +834,6 @@ app.put("/api/mark-messages-seen", async (req, res) => {
   }
 });
 
-// server.js
 app.post("/api/messages/mark-seen", async (req, res) => {
   const { userEmail, otherEmail } = req.body;
   try {
@@ -929,7 +865,6 @@ app.get("/api/messages/:sender/:receiver", async (req, res) => {
   }
 });
 
-// Get unread messages grouped by sender
 app.get("/api/unread-messages/:userEmail", async (req, res) => {
   try {
     const { userEmail } = req.params;
@@ -953,18 +888,25 @@ app.get("/api/unread-messages/:userEmail", async (req, res) => {
 
 app.get("/api/users/:id", async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select("name email photoUrl");
+    let user = await User.findById(req.params.id).select("name email photoUrl role accolades orgType numWorkers establishedSince");
+    let role = "individual";
+
+    if (!user) {
+      user = await organizationModel.findById(req.params.id).select("name email photoUrl organizationType numWorkers establishedSince accolades");
+      role = "organization";
+    }
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.status(200).json(user);
+
+    res.status(200).json({ ...user.toObject(), role });
   } catch (error) {
     console.error("Error fetching user by ID:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-// Upload Endpoint
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
@@ -978,18 +920,16 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
   }
 });
 
-// Use postRoutes for handling posts
 app.use("/api/posts", postRoutes);
 
 app.use((req, res) => res.status(404).json({ message: "Endpoint not found" }));
 
-// Start Server
 const http = require("http").createServer(app);
 const { Server } = require("socket.io");
 
 const io = new Server(http, {
   cors: {
-    origin: "*", // Use your frontend domain in production
+    origin: "*",
     methods: ["GET", "POST"],
   },
 });
@@ -997,21 +937,18 @@ const io = new Server(http, {
 io.on("connection", (socket) => {
   console.log("🟢 Socket connected:", socket.id);
 
-  // Join the user's room based on their email
   socket.on("join", (email) => {
-    socket.join(email);  // Join a room with the user's email
+    socket.join(email); 
     console.log(`${email} joined their room`);
   });
 
-  // Listen for incoming messages and send them to the receiver's room
   socket.on("sendMessage", (message) => {
     const { receiver, sender } = message;
-    io.to(receiver).emit("receiveMessage", message); // Receiver
-    io.to(sender).emit("receiveMessage", message);   // Sender (to reflect immediately)
+    io.to(receiver).emit("receiveMessage", message);
+    io.to(sender).emit("receiveMessage", message);  
     io.to(receiver).emit("newNotification");
   });  
 
-  // Handle disconnection
   socket.on("disconnect", () => {
     console.log("🔌 Disconnected:", socket.id);
   });

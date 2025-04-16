@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useUser } from "../context/UserContext";
 import { io } from "socket.io-client";
 
@@ -13,6 +13,7 @@ const ChatRoom = () => {
   const [file, setFile] = useState(null);
   const [otherUser, setOtherUser] = useState(null);
   const messagesEndRef = useRef(null);
+  const navigate = useNavigate();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -61,7 +62,6 @@ const ChatRoom = () => {
     socket.emit("join", user.email);
 
     const handleReceive = (msg) => {
-      // Only add if not already in list (by ID or timestamp)
       const isRelevant =
         (msg.sender === otherUser?.email && msg.receiver === user.email) ||
         (msg.sender === user.email && msg.receiver === otherUser?.email);
@@ -121,7 +121,7 @@ const ChatRoom = () => {
       });
 
       const savedMsg = await saveRes.json();
-      socket.emit("sendMessage", savedMsg); // Let socket trigger the UI
+      socket.emit("sendMessage", savedMsg);
       setMessage("");
       setFile(null);
     } catch (err) {
@@ -133,8 +133,15 @@ const ChatRoom = () => {
 
   return (
     <div className="flex flex-col items-center min-h-screen p-6 bg-gray-100">
-      <h2 className="text-2xl font-bold mb-4">Chat with {otherUser.name}</h2>
-
+      <h2 className="text-2xl font-bold mb-4">
+        Chat with{" "}
+        <span
+          className="text-blue-600 hover:underline cursor-pointer"
+          onClick={() => navigate(`/user/${otherUser._id}`)}
+        >
+          {otherUser.name}
+        </span>
+      </h2>
       <div className="w-full max-w-2xl h-[60vh] overflow-y-auto bg-white p-4 rounded shadow mb-4">
         {messages.map((msg, i) => {
           const isMe = msg.sender === user.email;

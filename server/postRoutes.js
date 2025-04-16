@@ -2,19 +2,22 @@ const express = require("express");
 const multer = require("multer");
 const { uploadToPinata } = require("./utils/pinataClient");
 const Post = require("./postModel");
-const User = require("./userModel"); // Import user model
+const User = require("./userModel");
 const router = express.Router();
+const organizationModel = require("./OrganizationModel");
 
-// Multer Configuration
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Create a new post (Handles text + optional image upload)
 router.post("/", upload.single("image"), async (req, res) => {
-  const { user, content, role } = req.body;
+  const { content, role } = req.body;
   let image = null;
 
   try {
-    if (!user || !content) return res.status(400).json({ message: "User and content are required" });
+    if (!req.body.userId || !content) {
+      return res.status(400).json({ message: "User and content are required" });
+    }
+
+    const parsedUser = JSON.parse(req.body.userId);
 
     if (req.file) {
       console.log("Uploading image to Pinata...");
@@ -22,8 +25,10 @@ router.post("/", upload.single("image"), async (req, res) => {
     }
 
     const newPost = new Post({
-      user,
-      userPhoto: role === "organization" ? "organization-default.png" : req.body.userPhoto,
+      user: parsedUser.name,
+      userId: parsedUser._id,
+      userPhoto: req.body.userPhoto || "",
+      userRole: role?.toLowerCase() === "organization" ? "Organization" : "User",
       content,
       image,
       likes: [],
@@ -38,25 +43,36 @@ router.post("/", upload.single("image"), async (req, res) => {
   }
 });
 
-// Fetch all posts with correct user photo
 router.get("/", async (req, res) => {
   try {
-    const posts = await Post.find().sort({ createdAt: -1 });
-    res.status(200).json(posts);
+    const posts = await Post.find().sort({ createdAt: -1 }).lean();
+
+    // Fetch user/org details manually
+    const enrichedPosts = await Promise.all(
+      posts.map(async (post) => {
+        const model = post.userRole === "Organization" ? organizationModel : User;
+        const user = await model.findById(post.userId).select("name _id photoUrl organizationType");
+
+        return {
+          ...post,
+          userId: user,
+        };
+      })
+    );
+
+    res.status(200).json(enrichedPosts);
   } catch (error) {
-    console.error("Error fetching posts:", error.message);
+    console.error("🔥 Error fetching posts:", error.message);
     res.status(500).json({ message: "Error fetching posts", error: error.message });
   }
 });
 
-// Like a post
 router.post("/:postId/like", async (req, res) => {
   const { username } = req.body;
   try {
     const post = await Post.findById(req.params.postId);
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    // Toggle Like (Remove if already liked)
     const likeIndex = post.likes.indexOf(username);
     if (likeIndex === -1) {
       post.likes.push(username);
@@ -72,14 +88,13 @@ router.post("/:postId/like", async (req, res) => {
   }
 });
 
-// Add a comment to a post
 router.post("/:postId/comment", async (req, res) => {
-  const { username, text } = req.body;
+  const { username, userId, text } = req.body;
   try {
     const post = await Post.findById(req.params.postId);
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    post.comments.push({ user: username, text });
+    post.comments.push({ user: username, userId, text });
     await post.save();
 
     res.status(200).json(post);
