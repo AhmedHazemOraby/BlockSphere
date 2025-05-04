@@ -86,7 +86,7 @@ const UploadDegree = () => {
 
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+      const contractAddress = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
       const abi = [
         {
           "inputs": [],
@@ -496,7 +496,7 @@ for (const event of events) {
 
       {uploadedDegree?.transactionHash && (
         <div className="mt-4 p-4 bg-green-100 rounded">
-          <p className="text-green-600">✅ Payment successful. Awaiting verification.</p>
+          <p className="text-green-600">Payment successful. Awaiting verification.</p>
         </div>
       )}
     </div>

@@ -39,7 +39,7 @@ const JobDetails = () => {
   const handleApply = async (e) => {
     e.preventDefault();
     if (!resume || !email || !phone) {
-      return setMessage('❌ Please fill out all fields.');
+      return setMessage('Please fill out all fields.');
     }
 
     try {
@@ -47,17 +47,17 @@ const JobDetails = () => {
       const result = await applyToJob(id, resumeUrl, email, phone);
 
       if (result.success !== false) {
-        setMessage('✅ Your application was submitted successfully!');
+        setMessage('Your application was submitted successfully!');
         setTimeout(() => {
           setHasApplied(true);
           setMessage('');
         }, 2000);
       } else {
-        setMessage('⚠️ You have already applied to this job.');
+        setMessage('You have already applied to this job.');
       }
     } catch (err) {
       console.error(err);
-      setMessage('❌ Failed to apply. Please try again.');
+      setMessage('Failed to apply. Please try again.');
     }
   };
 
@@ -134,8 +134,8 @@ const JobDetails = () => {
 
             {message && (
               <p className={`text-sm mt-2 ${
-                message.startsWith('✅') ? 'text-green-600' :
-                message.startsWith('❌') ? 'text-red-600' :
+                message.startsWith('') ? 'text-green-600' :
+                message.startsWith('') ? 'text-red-600' :
                 'text-yellow-600'
               }`}>
                 {message}
@@ -147,14 +147,14 @@ const JobDetails = () => {
         {role === 'individual' && hasApplied && (
            <>
            <p className="text-green-600 font-medium mt-4">
-             ✅ You’ve already applied to this job.
+             You’ve already applied to this job.
            </p>
        
            <button
              onClick={() => window.history.back()}
              className="mt-6 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-4 py-2 rounded"
            >
-             ← Back
+             Back
            </button>
          </>
         )}
@@ -204,7 +204,7 @@ const JobDetails = () => {
               onClick={() => window.history.back()}
               className="mt-6 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-4 py-2 rounded"
             >
-              ← Back
+              Back
             </button>
           </div>
         )}

@@ -19,7 +19,6 @@ const ChatRoom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Fetch other user
   useEffect(() => {
     if (!userId) return;
     fetch(`http://localhost:5000/api/users/${userId}`)
@@ -28,7 +27,6 @@ const ChatRoom = () => {
       .catch((err) => console.error("User fetch error:", err));
   }, [userId]);
 
-  // Fetch chat history and mark messages as seen
   useEffect(() => {
     if (!user?.email || !otherUser?.email) return;
 
@@ -42,7 +40,6 @@ const ChatRoom = () => {
       })
       .catch((err) => console.error("Message fetch error:", err));
 
-    // Mark messages as seen and refresh bell count
     fetch("http://localhost:5000/api/messages/mark-seen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -55,7 +52,6 @@ const ChatRoom = () => {
       .catch((err) => console.error("Seen update error:", err));
   }, [user?.email, otherUser?.email]);
 
-  // Join socket room and listen for messages
   useEffect(() => {
     if (!user?.email) return;
 
@@ -84,7 +80,6 @@ const ChatRoom = () => {
     return () => socket.off("receiveMessage", handleReceive);
   }, [user?.email, otherUser?.email, messages]);
 
-  // Send message
   const handleSendMessage = async () => {
     if (!message.trim() && !file) return;
 
@@ -163,7 +158,7 @@ const ChatRoom = () => {
                   rel="noopener noreferrer"
                   className={`px-4 py-2 rounded-lg max-w-xs break-words underline ${style}`}
                 >
-                  📎 View File
+                  View File
                 </a>
               )}
             </div>

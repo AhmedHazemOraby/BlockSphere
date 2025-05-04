@@ -45,16 +45,13 @@ app.post("/api/upload-certificate", upload.single("certificate"), async (req, re
   const { userId, organizationId, description } = req.body;
 
   try {
-    console.log("🔍 Upload Request Body:", req.body);
-    console.log("📂 Uploaded File:", req.file);
 
     if (!userId || !organizationId || !req.file || !description) {
-      console.error("❌ Missing required fields:", { userId, organizationId, reqFile: req.file, description });
-      return res.status(400).json({ message: "⚠️ Missing required fields" });
+      console.error("Missing required fields:", { userId, organizationId, reqFile: req.file, description });
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
     const ipfsUrl = await uploadToPinata(req.file.buffer, req.file.originalname);
-    console.log("✅ Uploaded to IPFS:", ipfsUrl);
 
     const newCertificate = new Certificate({
       userId,
@@ -66,10 +63,10 @@ app.post("/api/upload-certificate", upload.single("certificate"), async (req, re
 
     await newCertificate.save();
 
-    res.status(201).json({ message: "✅ Certificate uploaded successfully. Awaiting payment.", certificate: newCertificate });
+    res.status(201).json({ message: "Certificate uploaded successfully. Awaiting payment.", certificate: newCertificate });
   } catch (error) {
-    console.error("❌ Error uploading certificate:", error.message);
-    res.status(500).json({ message: "❌ Error uploading certificate", error: error.message });
+    console.error("Error uploading certificate:", error.message);
+    res.status(500).json({ message: "Error uploading certificate", error: error.message });
   }
 });
 
@@ -103,7 +100,6 @@ app.post("/api/pay-degree-fee", async (req, res) => {
   const { degreeId, transactionHash, contractId } = req.body;
 
   try {
-    console.log("🎯 Incoming pay-degree-fee:", req.body);
 
     const degree = await Degree.findByIdAndUpdate(
       degreeId,
@@ -112,7 +108,7 @@ app.post("/api/pay-degree-fee", async (req, res) => {
     );
 
     if (!degree) {
-      console.error("❌ Degree not found for ID:", degreeId);
+      console.error("Degree not found for ID:", degreeId);
       return res.status(404).json({ message: "Degree not found" });
     }
 
@@ -128,7 +124,7 @@ app.post("/api/pay-degree-fee", async (req, res) => {
 
     res.status(200).json({ message: "Payment saved and degree pending", degree });
   } catch (error) {
-    console.error("❌ Error in /pay-degree-fee:", error.message, error);
+    console.error("Error in /pay-degree-fee:", error.message, error);
     res.status(500).json({ message: "Error saving payment", error: error.message });
   }
 });
@@ -166,7 +162,7 @@ app.post("/api/respond-degree", async (req, res) => {
 
     res.status(200).json({ message: `Degree ${response} and notification updated` });
   } catch (error) {
-    console.error("❌ Error in /api/respond-degree:", error.message);
+    console.error("Error in /api/respond-degree:", error.message);
     res.status(500).json({ message: "Error responding to degree", error: error.message });
   }
 });
@@ -217,7 +213,7 @@ app.delete('/api/jobs/:jobId/applicants/:applicantId', async (req, res) => {
 
     res.status(200).json({ message: "Applicant removed successfully" });
   } catch (err) {
-    console.error("❌ Error removing applicant:", err.message);
+    console.error("Error removing applicant:", err.message);
     res.status(500).json({ message: "Failed to remove applicant", error: err.message });
   }
 });
@@ -247,7 +243,6 @@ app.post("/api/friend-request/respond", async (req, res) => {
   const { requestId, status } = req.body;
 
   try {
-    console.log("🟡 Friend request ID:", requestId, "Status:", status);
 
     const request = await FriendRequest.findByIdAndUpdate(
       requestId,
@@ -256,11 +251,9 @@ app.post("/api/friend-request/respond", async (req, res) => {
     );
 
     if (!request) {
-      console.error("❌ Friend request not found");
+      console.error("Friend request not found");
       return res.status(404).json({ message: "Request not found" });
     }
-
-    console.log("✅ Friend request:", request);
 
     if (status === "accepted") {
       if (!request.sender || !request.receiver) {
@@ -278,7 +271,7 @@ app.post("/api/friend-request/respond", async (req, res) => {
 
     res.status(200).json(request);
   } catch (error) {
-    console.error("🔥 Error responding to request:", error.message);
+    console.error("Error responding to request:", error.message);
     res.status(500).json({ message: "Error responding to request", error: error.message });
   }
 });
@@ -300,7 +293,6 @@ app.get("/api/network-users/:userId", async (req, res) => {
 
 app.get("/api/get-organization-wallet/:id", async (req, res) => {
   try {
-    console.log("🔍 Fetching wallet for organization ID:", req.params.id);
 
     const organization = await organizationModel.findById(req.params.id);
 
@@ -308,10 +300,9 @@ app.get("/api/get-organization-wallet/:id", async (req, res) => {
       return res.status(404).json({ error: "Organization not found" });
     }
 
-    console.log("✅ Organization Wallet:", organization.walletAddress);
     res.json({ walletAddress: organization.walletAddress });
   } catch (error) {
-    console.error("❌ Server Error:", error);
+    console.error("Server Error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -414,11 +405,11 @@ app.get('/api/my-jobs/:orgId', async (req, res) => {
 app.get("/api/get-organization-notifications/:organizationId", async (req, res) => {
   try {
     const orgId = req.params.organizationId;
-    console.log("📥 Incoming notification request for org:", orgId);
+    console.log("Incoming notification request for org:", orgId);
 
     const organization = await organizationModel.findById(orgId);
     if (!organization) {
-      console.warn("❌ Organization not found for ID:", orgId);
+      console.warn("Organization not found for ID:", orgId);
       return res.status(404).json({ message: "Organization not found" });
     }
 
@@ -430,19 +421,17 @@ app.get("/api/get-organization-notifications/:organizationId", async (req, res) 
       .populate("documentId");
 
     if (!allNotifications.length) {
-      console.info("ℹ️ No pending notifications for org:", orgId);
+      console.info("No pending notifications for org:", orgId);
     }
 
     const certificates = allNotifications.filter(n => (n.type || "").toLowerCase() === "certificate");
     const degrees = allNotifications.filter(n => (n.type || "").toLowerCase() === "degree" &&
     n.documentId);
 
-    console.log(`✅ Notifications fetched — Certs: ${certificates.length}, Degrees: ${degrees.length}`);
-
     return res.status(200).json({ certificates, degrees });
 
   } catch (error) {
-    console.error("❌ Error fetching notifications:", error);
+    console.error("Error fetching notifications:", error);
     return res.status(500).json({ message: "Error fetching notifications", error: error.message });
   }
 });
@@ -498,26 +487,23 @@ app.get("/api/degrees/:id", async (req, res) => {
 
 app.get("/api/get-organizations", async (req, res) => {
   const { type } = req.query;
-  console.log("🔍 Requested Organization Type:", type);
 
   try {
       if (!type) {
-          console.error("❌ Error: Organization type is missing");
+          console.error("Error: Organization type is missing");
           return res.status(400).json({ message: "Organization type is required" });
       }
 
       const organizations = await organizationModel.find({ organizationType: type });
 
-      console.log("✅ Fetched Organizations:", organizations); 
-
       if (!organizations.length) {
-          console.warn("⚠️ Warning: No organizations found for type:", type);
+          console.warn("Warning: No organizations found for type:", type);
           return res.status(200).json([]);
       }
 
       res.status(200).json(organizations);
   } catch (error) {
-      console.error("❌ Error fetching organizations:", error);
+      console.error("Error fetching organizations:", error);
       res.status(500).json({ message: "Error fetching organizations", error: error.message });
   }
 });
@@ -539,7 +525,6 @@ app.post("/api/pay-certificate-fee", async (req, res) => {
   const { certificateId, transactionHash, contractId } = req.body;
 
   try {
-    console.log("📥 Incoming payment payload:", req.body);
 
     if (!certificateId || !transactionHash || contractId === undefined) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -556,11 +541,9 @@ app.post("/api/pay-certificate-fee", async (req, res) => {
     );
 
     if (!updatedCertificate) {
-      console.error("❌ Certificate not found for ID:", certificateId);
+      console.error("Certificate not found for ID:", certificateId);
       return res.status(404).json({ message: "Certificate not found" });
     }
-
-    console.log("📄 Certificate after update:", updatedCertificate);
 
     if (!updatedCertificate.organizationId || !updatedCertificate.userId) {
       return res.status(400).json({ message: "Missing organization or user ID in certificate" });
@@ -576,15 +559,13 @@ app.post("/api/pay-certificate-fee", async (req, res) => {
 
     const saved = await newNotification.save();
 
-    console.log("✅ Notification saved to DB:", saved);
-
     res.status(200).json({
-      message: "✅ Payment recorded and certificate is now pending verification.",
+      message: "Payment recorded and certificate is now pending verification.",
       certificate: updatedCertificate,
     });
 
   } catch (error) {
-    console.error("❌ Error processing certificate fee:", error);
+    console.error("Error processing certificate fee:", error);
     res.status(500).json({
       message: "Error storing transaction hash",
       error: error.message,
@@ -690,7 +671,6 @@ app.post('/api/login', async (req, res) => {
 
 app.get("/api/profile", async (req, res) => {
   const { email } = req.query;  
-  console.log("Received email:", email); 
 
   if (!email) {
     return res.status(400).json({ message: "Email is required" });
@@ -750,10 +730,10 @@ app.put("/api/profile", upload.single("photo"), async (req, res) => {
           if (Array.isArray(parsed)) {
             updateData[field] = parsed;
           } else {
-            console.warn(`⚠️ Parsed '${field}' is not an array`);
+            console.warn(`Parsed '${field}' is not an array`);
           }
         } catch (err) {
-          console.warn(`⚠️ Failed to parse field '${field}':`, err.message);
+          console.warn(`Failed to parse field '${field}':`, err.message);
           updateData[field] = [];
         }
       }
@@ -780,7 +760,7 @@ app.put("/api/profile", upload.single("photo"), async (req, res) => {
 
     res.status(200).json({ message: "Profile updated successfully", updatedProfile });
   } catch (error) {
-    console.error("❌ Error updating profile:", error.message);
+    console.error("Error updating profile:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
@@ -935,11 +915,9 @@ const io = new Server(http, {
 });
 
 io.on("connection", (socket) => {
-  console.log("🟢 Socket connected:", socket.id);
 
   socket.on("join", (email) => {
     socket.join(email); 
-    console.log(`${email} joined their room`);
   });
 
   socket.on("sendMessage", (message) => {
@@ -949,10 +927,8 @@ io.on("connection", (socket) => {
     io.to(receiver).emit("newNotification");
   });  
 
-  socket.on("disconnect", () => {
-    console.log("🔌 Disconnected:", socket.id);
-  });
+  socket.on("disconnect", () => {});
 });
 
 const PORT = process.env.PORT || 5000;
-http.listen(PORT, () => console.log(`🚀 Server with Socket.IO running on port ${PORT}`));
+http.listen(PORT, () => console.log(`Server with Socket.IO running on port ${PORT}`));

@@ -207,11 +207,11 @@ const Home = () => {
                     onClick={() => handleLike(post._id)}
                     className="flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-lg hover:bg-gray-200 transition duration-200"
                   >
-                    👍 <span>{post.likes?.length || 0} Likes</span>
+                     <span>{post.likes?.length || 0} Likes</span>
                   </button>
 
                   <button className="flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-lg hover:bg-gray-200 transition duration-200">
-                    💬 {post.comments?.length || 0} Comments
+                     {post.comments?.length || 0} Comments
                   </button>
                 </div>
 
@@ -258,7 +258,7 @@ const Home = () => {
                     onClick={() => handleComment(post._id)}
                     className="ml-2 bg-yellow-500 text-white font-semibold px-3 py-2 rounded-lg hover:bg-yellow-600 transition duration-200"
                   >
-                    💬
+                    Post
                   </button>
                 </div>
               </div>

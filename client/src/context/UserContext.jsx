@@ -201,8 +201,6 @@ export const UserProvider = ({ children }) => {
             throw new Error("Invalid response from server: Missing user or role");
         }
 
-        console.log("MetaMask Login Successful:", loginData);
-
         setUser(loginData.user);
         setUserProfile(loginData.user);
         setRole(loginData.role);
@@ -224,7 +222,6 @@ export const UserProvider = ({ children }) => {
   
   const fetchUserProfile = async () => {
     if (user && user.email) {
-      console.log("Fetching profile for:", user.email);
       setLoading(true); 
       const email = encodeURIComponent(user.email);
       try {
@@ -234,7 +231,6 @@ export const UserProvider = ({ children }) => {
         }
         const data = await res.json();
         if (data.profile) {
-          console.log("Profile fetched:", data.profile);
           setUserProfile(data.profile);
           setRole(data.role || "individual");
           setRefetchTrigger(prev => !prev); 
@@ -246,7 +242,6 @@ export const UserProvider = ({ children }) => {
         setError(error.message); 
       } finally {
         setLoading(false); 
-        console.log("Loading state:", loading); 
       }
     }
   }; 

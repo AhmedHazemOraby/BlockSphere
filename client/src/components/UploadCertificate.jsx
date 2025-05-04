@@ -19,11 +19,11 @@ const UploadCertificate = () => {
     if (organizationType) {
         fetch(`http://localhost:5000/api/get-organizations?type=${organizationType}`)
             .then((res) => {
-                console.log("📡 API Response Status:", res.status); 
+                console.log("API Response Status:", res.status); 
                 return res.text();
             })
             .then((data) => {
-                console.log("📜 Raw API Response:", data);
+                console.log("Raw API Response:", data);
 
                 try {
                     const jsonData = JSON.parse(data);
@@ -33,12 +33,12 @@ const UploadCertificate = () => {
                         setOrganizations([]);
                     }
                 } catch (err) {
-                    console.error("❌ JSON Parse Error:", err, "Raw Data:", data);
+                    console.error("JSON Parse Error:", err, "Raw Data:", data);
                     setOrganizations([]);
                 }
             })
             .catch((err) => {
-                console.error("❌ Error fetching organizations:", err);
+                console.error("Error fetching organizations:", err);
                 setOrganizations([]);
             });
     } else {
@@ -60,11 +60,11 @@ const UploadCertificate = () => {
           return res.json();
         })
         .then((data) => {
-          console.log("✅ Organization Wallet Data:", data);
+          console.log("Organization Wallet Data:", data);
           setOrganizationWallet(data.walletAddress);
         })
         .catch((err) => {
-          console.error("❌ Error fetching organization wallet:", err);
+          console.error("Error fetching organization wallet:", err);
           setOrganizationWallet("");
         });
     } else {
@@ -82,7 +82,7 @@ const UploadCertificate = () => {
     setMessage("");
   
     if (!certificate || !description || !selectedOrganization) {
-      setMessage("⚠️ Please fill in all fields.");
+      setMessage("Please fill in all fields.");
       setLoading(false);
       return;
     }
@@ -101,16 +101,16 @@ const UploadCertificate = () => {
       });
   
       const data = await response.json();
-      console.log("✅ Certificate Upload Response:", data);
+      console.log("Certificate Upload Response:", data);
   
       if (!response.ok || !data.certificate) {
         throw new Error(data.message || "Failed to upload certificate.");
       }
   
       setUploadedCertificate(data.certificate);
-      setMessage("✅ Certificate uploaded successfully! Please pay the fee.");
+      setMessage("Certificate uploaded successfully! Please pay the fee.");
     } catch (error) {
-      setMessage("❌ Error uploading certificate.");
+      setMessage("Error uploading certificate.");
       console.error("Upload error:", error);
       setUploadedCertificate(null);
     } finally {
@@ -118,9 +118,9 @@ const UploadCertificate = () => {
     }
   };      
   
-  console.log("📜 Uploaded Certificate Data:", uploadedCertificate);
-  console.log("✅ Certificate URL:", uploadedCertificate?.certificateUrl);
-  console.log("✅ Organization Wallet:", organizationWallet);  
+  console.log("Uploaded Certificate Data:", uploadedCertificate);
+  console.log("Certificate URL:", uploadedCertificate?.certificateUrl);
+  console.log("Organization Wallet:", organizationWallet);  
 
   const [paying, setPaying] = useState(false); 
   const handlePayFee = async () => {
@@ -140,10 +140,10 @@ const UploadCertificate = () => {
     }
 
     try {
-      setPaying(true); // Disable button
+      setPaying(true);
       await window.ethereum.request({ method: "eth_requestAccounts" });
 
-      const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; 
+      const contractAddress = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"; 
       const abi = [
         {
           "inputs": [],
@@ -456,7 +456,7 @@ const UploadCertificate = () => {
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(contractAddress, abi, signer);
 
-      console.log("🚀 Sending transaction with values:", {
+      console.log("Sending transaction with values:", {
         contractAddress,
         organizationWallet,
         certificateUrl: uploadedCertificate.certificateUrl,
@@ -470,7 +470,7 @@ const UploadCertificate = () => {
       );
 
       const receipt = await tx.wait();
-      console.log("🧾 Full Transaction Receipt:", receipt);
+      console.log("Full Transaction Receipt:", receipt);
 
       const iface = new ethers.Interface(abi);
 
@@ -481,31 +481,30 @@ for (const log of receipt.logs) {
     if (log.address.toLowerCase() !== contractAddress.toLowerCase()) continue;
 
     const parsedLog = iface.parseLog(log);
-    console.log("📦 Parsed Log:", parsedLog);
+    console.log("Parsed Log:", parsedLog);
 
     if (parsedLog.name === "CertificateUploaded") {
-      console.log("✅ Found CertificateUploaded event:", parsedLog.args);
+      console.log("Found CertificateUploaded event:", parsedLog.args);
       contractCertificateId = Number(parsedLog.args.id);
       break;
     }
   } catch (err) {
-    console.warn("⚠️ Could not parse log:", err.message);
+    console.warn("Could not parse log:", err.message);
   }
 }
 
 if (contractCertificateId === null) {
-  console.error("❌ Could not extract contractId from transaction receipt logs!");
-  console.log("📦 Raw Logs:", receipt.logs);
-  throw new Error("❌ Could not extract contractId from transaction receipt!");
+  console.error("Could not extract contractId from transaction receipt logs!");
+  console.log("Raw Logs:", receipt.logs);
+  throw new Error("Could not extract contractId from transaction receipt!");
 }
 
       if (contractCertificateId === null) {
-        throw new Error("❌ Could not extract contractId from transaction receipt!");
+        throw new Error("Could not extract contractId from transaction receipt!");
       }
 
-      console.log("✅ Extracted contract ID:", contractCertificateId);
+      console.log("Extracted contract ID:", contractCertificateId);
 
-      // Store transaction hash + contractId in backend
       await fetch("http://localhost:5000/api/pay-certificate-fee", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -522,9 +521,9 @@ if (contractCertificateId === null) {
         contractId: contractCertificateId,
       }));
 
-      setMessage("✅ Payment successful! Your certificate is awaiting verification.");
+      setMessage("Payment successful! Your certificate is awaiting verification.");
     } catch (error) {
-      console.error("❌ Payment error:", error);
+      console.error("Payment error:", error);
       setMessage("Error processing payment.");
     } finally {
       setPaying(false);
@@ -595,7 +594,7 @@ if (contractCertificateId === null) {
       {uploadedCertificate && uploadedCertificate.certificateUrl ? (
       uploadedCertificate.transactionHash ? (
         <div className="mt-4 p-4 bg-green-100 rounded shadow-md">
-          <p className="text-green-600 font-bold">✅ Payment successful! Your certificate is awaiting verification.</p>
+          <p className="text-green-600 font-bold">Payment successful! Your certificate is awaiting verification.</p>
         </div>
       ) : (
         <div className="mt-4 p-4 bg-gray-100 rounded shadow-md">

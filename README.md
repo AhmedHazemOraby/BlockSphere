@@ -1,1 +1,112 @@
-BlockSphere
+# BlockSphere
+
+BlockSphere is a decentralized certificate and degree verification platform. It leverages blockchain and IPFS to provide immutable and verifiable academic records for users and institutions.
+
+---
+
+## Features
+
+- User & Organization registration and authentication
+- Upload and verification of certificates and degrees
+- Payment and interaction with smart contracts on Ethereum (via MetaMask)
+- Real-time messaging between users
+- Notifications for verification actions
+- Role-based access for users and organizations
+
+---
+
+## Technologies Used
+
+### Frontend
+- React + Vite
+- Tailwind CSS
+- Context API for state management
+- Socket.IO (for real-time features)
+
+### Backend
+- Node.js + Express
+- MongoDB (via Mongoose)
+- Multer (file uploads)
+- Ethers.js (blockchain interaction)
+- IPFS via Pinata SDK
+
+### Smart Contracts
+- Solidity
+- Hardhat development environment
+- Ethereum local testnet (Hardhat or Ganache)
+
+---
+
+## Project Structure
+
+### Client
+components/ - All React components
+
+context/ - Global state management with Context API
+
+images/ - App assets
+
+src/ - Main React app logic
+
+### Server
+utils/ - Blockchain, Pinata helpers
+
+---
+  
+## Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/yourusername/blocksphere.git
+cd blocksphere
+
+2. Install dependencies
+
+For client:
+
+cd client
+npm install
+
+For server:
+
+cd server
+npm install
+
+3. Setup Environment Variables
+Create a .env file in the server directory with the following:
+
+MONGODB_URI=your_mongo_connection_string
+PORT=5000
+SEPOLIA_RPC_URL=your_sepolia_rpc_url
+PRIVATE_KEY=your_ethereum_private_key
+CONTRACT_REGISTRY_ADDRESS=your_registry_contract_address
+CONTRACT_VERIFICATION_ADDRESS=your_verification_contract_address
+PINATA_API_KEY=your_pinata_api_key
+PINATA_SECRET_API_KEY=your_pinata_secret
+
+4. Run the app
+
+Backend:
+
+cd server
+node index.js
+
+Frontend:
+
+cd client
+npm run dev
+
+The app will be running at:
+Frontend: http://localhost:5173
+Backend API: http://localhost:5000
+
+## Notes
+
+Use MetaMask on your browser for blockchain interaction.
+
+Uploads are pinned to IPFS via Pinata.
+
+Degrees and certificates are verified through smart contract interaction.
+
+Make sure to have a local Ethereum node or connect to Sepolia/Testnet.

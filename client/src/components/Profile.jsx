@@ -58,13 +58,12 @@ const Profile = () => {
   }
 }, [userProfile]);
   
-  // Function to fetch verified certificates
   const fetchVerifiedCertificates = async (userProfileId) => {
     try {
       const response = await fetch(`http://localhost:5000/api/get-user-certificates/${userProfileId}`);  
       if (!response.ok) throw new Error("Failed to fetch certificates");
       const data = await response.json();
-      console.log("📦 Certificates fetched from API:", data);
+      console.log("Certificates fetched from API:", data);
       setCertificates(data.filter(cert => cert.status === "verified"));
     } catch (error) {
       console.error("Error fetching certificates:", error);
@@ -221,7 +220,7 @@ const Profile = () => {
         setIsEditing(false);
       }, 200);
     } catch (error) {
-      console.error("❌ Error updating profile:", error);
+      console.error("Error updating profile:", error);
       alert("Failed to update profile.");
     }
   };  
@@ -804,7 +803,6 @@ const Profile = () => {
                         </span>
                       </p>
 
-                      {/* Trash icon for edit view */}
                       <button
                         onClick={() => handleDeleteCertificate(cert._id)}
                         className="absolute top-2 right-2 text-red-500 hover:text-red-700 hidden group-hover:block"

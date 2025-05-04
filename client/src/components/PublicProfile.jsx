@@ -1,4 +1,3 @@
-// PublicProfile.jsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useUser } from "../context/UserContext";
@@ -51,7 +50,7 @@ const PublicProfile = () => {
   return (
     <div className="flex flex-col items-center min-h-screen p-6 bg-gray-100">
     <button onClick={() => navigate(-1)} className="mb-4 bg-yellow-400 px-4 py-1 rounded text-black font-semibold hover:bg-yellow-500">
-        ← Back
+        Back
     </button>
 
     <ProfileView

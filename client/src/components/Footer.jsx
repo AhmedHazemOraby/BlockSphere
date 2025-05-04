@@ -10,7 +10,7 @@ const Footer = () => {
         </div>
         <div className="flex flex-col text-center md:text-right">
           <p className="text-sm font-bold">
-            Empowering Your Professional Journey with Web3
+            Enhancing Your Professional Journey with Web3
           </p>
         </div>
       </div>

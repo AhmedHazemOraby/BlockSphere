@@ -3,7 +3,7 @@ import { useUser } from "../context/UserContext";
 import { ethers } from "ethers";
 import { useNavigate } from 'react-router-dom'; 
 
-const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const contractAddress = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
 
 const abi = [
   {
@@ -390,11 +390,11 @@ const Network = () => {
   const handleResponse = async (notificationId, response, comment = "", notification) => {
     try {
       if (response === "accepted") {
-        console.log("🔎 FULL Notification Object:", notification);
-        console.log("🧩 Certificate ID:", notification?.certificateId);
+        console.log("FULL Notification Object:", notification);
+        console.log("Certificate ID:", notification?.certificateId);
         const contractId = notification?.documentId?.contractId ?? null;
         if (contractId == null) {
-          console.error("❌ contractId is missing for this certificate", notification);
+          console.error("contractId is missing for this certificate", notification);
           throw new Error("Missing contractId.");
         }
 
@@ -405,7 +405,7 @@ const Network = () => {
 
         const tx = await contract.verifyCertificate(contractId, true, comment);
         await tx.wait();
-        console.log("✅ Verified on blockchain:", tx.hash);
+        console.log("Verified on blockchain:", tx.hash);
       }
 
       await fetch("http://localhost:5000/api/respond-certificate", {
@@ -420,7 +420,7 @@ const Network = () => {
       }));
       setMessage(`Certificate ${response}`);
     } catch (error) {
-      console.error("❌ Error updating certificate:", error);
+      console.error("Error updating certificate:", error);
       setMessage("Error processing request.");
     }
   };
@@ -436,7 +436,7 @@ const Network = () => {
       if (!res.ok) throw new Error("Failed to respond to degree");
   
       const data = await res.json();
-      console.log("✅ Degree response submitted:", data);
+      console.log("Degree response submitted:", data);
   
       await fetchUserProfile();            
       setRefetchTrigger(prev => !prev);   
@@ -444,7 +444,7 @@ const Network = () => {
       await fetchNotifications();        
   
     } catch (error) {
-      console.error("❌ Error handling degree verification:", error);
+      console.error("Error handling degree verification:", error);
     }
   };  
   
@@ -472,7 +472,7 @@ const Network = () => {
           }));
 
           setAllUsers((prevUsers) => prevUsers.filter((u) => u._id !== otherUserId));
-          setMessage("✅ Connection accepted.");
+          setMessage("Connection accepted.");
         }
       }
     } catch (err) {
