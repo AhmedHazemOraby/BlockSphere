@@ -55,10 +55,8 @@ utils/ - Blockchain, Pinata helpers
   
 ## Getting Started
 
-### 1. Clone the repository:
+### 1. Download the repository:
 
-```bash
-git clone https://github.com/yourusername/blocksphere.git
 cd blocksphere
 
 2. Install dependencies:
