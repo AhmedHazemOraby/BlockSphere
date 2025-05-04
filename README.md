@@ -83,7 +83,9 @@ PINATA_SECRET_API_KEY=your_pinata_secret
 PRIVATE_KEY=your_ethereum_private_key (Metamask private key for public deployment to a testnet)
 SEPOLIA_RPC_URL=your_sepolia_rpc_url (For Sepolia testnet deployment only)
 
-NOTE: MAKE SURE TO REPLACE CONTRACT ADDRESS IN "Network.jsx", "UploadCertificate.jsx" and "UploadDegree.jsx"
+NOTE: MAKE SURE TO REPLACE CONTRACT ADDRESS IN "Network.jsx", "UploadCertificate.jsx" and "UploadDegree.jsx":
+
+const contractAddress = " " # Add your contract address here
 
 If you want to change to a testnet, change the settings "in hardhat.config.js".
 

@@ -4,12 +4,6 @@ const FormData = require("form-data");
 
 const pinataApiKey = process.env.PINATA_API_KEY;
 const pinataSecretApiKey = process.env.PINATA_SECRET_API_KEY;
-/**
- * Uploads a file to Pinata using the Pinata Cloud API.
- * @param {Buffer} fileBuffer - The file content in buffer format.
- * @param {string} fileName - The name of the file to be uploaded (default is "file").
- * @returns {string} - The URL of the uploaded file on IPFS.
- */
 
 const uploadToPinata = async (fileBuffer, fileName = "file") => {
   const formData = new FormData();
