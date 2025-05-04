@@ -55,13 +55,13 @@ utils/ - Blockchain, Pinata helpers
   
 ## Getting Started
 
-### 1. Clone the repository
+### 1. Clone the repository:
 
 ```bash
 git clone https://github.com/yourusername/blocksphere.git
 cd blocksphere
 
-2. Install dependencies
+2. Install dependencies:
 
 For client:
 
@@ -73,39 +73,36 @@ For server:
 cd server
 npm install
 
-3. Setup Environment Variables
+3. Setup Environment Variables:
 Create a .env file in the server directory with the following:
 
 MONGODB_URI=your_mongo_connection_string
 PORT=5000
 PINATA_API_KEY=your_pinata_api_key
 PINATA_SECRET_API_KEY=your_pinata_secret
-PRIVATE_KEY=your_ethereum_private_key (Metamask private key for public deployment to a testnet)
-SEPOLIA_RPC_URL=your_sepolia_rpc_url (For Sepolia testnet deployment only)
 
-NOTE: MAKE SURE TO REPLACE CONTRACT ADDRESS IN "Network.jsx", "UploadCertificate.jsx" and "UploadDegree.jsx":
+4. Run the app:
 
-const contractAddress = " " # Add your contract address here
+IMPORTANT: HOW TO DEPLOY SMART CONTRACT ON LOCAL HARDHAT NODE
 
-If you want to change to a testnet, change the settings "in hardhat.config.js".
+1. cd contracts (Open the contracts folder)
+2. npx hardhat node (To start the hardhat node)
+3. npx hardhat run scripts/deploy.js --network localhost (Run the deploy.js script in a seperate terminal)
+4. A contract address will be shown, copy it and paste it in "Network.jsx", "UploadCertificate.jsx" and "UploadDegree.jsx":
 
-4. Run the app
+const contractAddress = " " # Add your contract address here between quotations
 
 Backend:
 
 cd server
-node index.js
+node server.js
 
 Frontend:
 
 cd client
 npm run dev
 
-The app will be running at:
-Frontend: http://localhost:5173
-Backend API: http://localhost:5000
-
-## Notes
+## Important Notes
 
 Use MetaMask on your browser for blockchain interaction.
 
@@ -113,4 +110,4 @@ Uploads are pinned to IPFS via Pinata.
 
 Degrees and certificates are verified through smart contract interaction.
 
-Make sure to have a local Ethereum node or connect to Sepolia/Testnet.
+Make sure to have a local hardhat node.
