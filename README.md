@@ -78,12 +78,14 @@ Create a .env file in the server directory with the following:
 
 MONGODB_URI=your_mongo_connection_string
 PORT=5000
-SEPOLIA_RPC_URL=your_sepolia_rpc_url
-PRIVATE_KEY=your_ethereum_private_key
-CONTRACT_REGISTRY_ADDRESS=your_registry_contract_address
-CONTRACT_VERIFICATION_ADDRESS=your_verification_contract_address
 PINATA_API_KEY=your_pinata_api_key
 PINATA_SECRET_API_KEY=your_pinata_secret
+PRIVATE_KEY=your_ethereum_private_key (Metamask private key for public deployment to a testnet)
+SEPOLIA_RPC_URL=your_sepolia_rpc_url (For Sepolia testnet deployment only)
+
+NOTE: MAKE SURE TO REPLACE CONTRACT ADDRESS IN "Network.jsx", "UploadCertificate.jsx" and "UploadDegree.jsx"
+
+If you want to change to a testnet, change the settings "in hardhat.config.js".
 
 4. Run the app
 
