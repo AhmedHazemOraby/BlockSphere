@@ -1,6 +1,6 @@
 # BlockSphere
 
-BlockSphere is a decentralized certificate and degree verification platform. It leverages blockchain and IPFS to provide immutable and verifiable academic records for users and institutions.
+BlockSphere is a hybrid Professional Network dApp. It leverages blockchains and IPFS to provide immutable and verifiable academic records for users and institutions.
 
 ---
 
